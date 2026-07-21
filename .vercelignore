@@ -1,0 +1,15 @@
+node_modules
+**/node_modules
+.svn
+.git
+.env
+.env.*
+.DS_Store
+*.log
+.vscode
+.idea
+dist
+build
+schedulfy/dist
+.sourcemap
+.vercel

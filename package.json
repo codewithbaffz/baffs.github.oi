@@ -1,0 +1,27 @@
+{
+  "name": "productivityapp",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "cd schedulfy && npm run dev",
+    "dev:api": "node server.js",
+    "build": "cd schedulfy && npm run build",
+    "preview": "cd schedulfy && npm run preview"
+  },
+  "workspaces": [
+    "schedulfy"
+  ],
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^9.7.4",
+    "react-markdown": "^10.1.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
