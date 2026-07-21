@@ -1,0 +1,68 @@
+{
+  "name": "CalendarEvent",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "start_time": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "end_time": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "user_id": {
+      "type": "string"
+    },
+    "task_id": {
+      "type": "string"
+    },
+    "source": {
+      "type": "string",
+      "enum": ["manual", "google", "outlook", "zoom", "schedulfy"],
+      "default": "manual"
+    },
+    "external_id": {
+      "type": "string"
+    },
+    "color": {
+      "type": "string"
+    },
+    "is_all_day": {
+      "type": "boolean",
+      "default": false
+    },
+    "location": {
+      "type": "string"
+    },
+    "attendees": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "zoom_link": {
+      "type": "string"
+    }
+  },
+  "required": ["title", "start_time", "end_time"],
+  "rls": {
+    "create": {
+      "data.user_id": "{{user.id}}"
+    },
+    "read": {
+      "data.user_id": "{{user.id}}"
+    },
+    "update": {
+      "data.user_id": "{{user.id}}"
+    },
+    "delete": {
+      "data.user_id": "{{user.id}}"
+    }
+  }
+}

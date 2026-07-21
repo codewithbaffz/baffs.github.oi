@@ -1,0 +1,80 @@
+{
+  "name": "UserProfile",
+  "type": "object",
+  "properties": {
+    "user_id": {
+      "type": "string"
+    },
+    "workspace_id": {
+      "type": "string"
+    },
+    "role": {
+      "type": "string",
+      "enum": ["admin", "member"],
+      "default": "member"
+    },
+    "avatar_url": {
+      "type": "string"
+    },
+    "bio": {
+      "type": "string"
+    },
+    "display_name": {
+      "type": "string"
+    },
+    "timezone": {
+      "type": "string",
+      "default": "UTC"
+    },
+    "peak_hours_start": {
+      "type": "number",
+      "default": 9
+    },
+    "peak_hours_end": {
+      "type": "number",
+      "default": 17
+    },
+    "google_calendar_connected": {
+      "type": "boolean",
+      "default": false
+    },
+    "outlook_connected": {
+      "type": "boolean",
+      "default": false
+    },
+    "zoom_connected": {
+      "type": "boolean",
+      "default": false
+    },
+    "email_to_task_address": {
+      "type": "string"
+    },
+    "reminder_1day_enabled": {
+      "type": "boolean",
+      "default": true
+    },
+    "reminder_1hour_enabled": {
+      "type": "boolean",
+      "default": true
+    },
+    "focus_mode_active": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": ["user_id"],
+  "rls": {
+    "create": {
+      "data.user_id": "{{user.id}}"
+    },
+    "read": {
+      "data.user_id": "{{user.id}}"
+    },
+    "update": {
+      "data.user_id": "{{user.id}}"
+    },
+    "delete": {
+      "data.user_id": "{{user.id}}"
+    }
+  }
+}

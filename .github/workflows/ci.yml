@@ -1,0 +1,27 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+      - name: Install root deps
+        run: npm ci
+      - name: Lint root (if present)
+        run: npm run lint --if-present
+      - name: Install schedulfy deps
+        run: cd schedulfy && npm ci
+      - name: Lint schedulfy
+        run: cd schedulfy && npm run lint
+      - name: Build schedulfy
+        run: cd schedulfy && npm run build
