@@ -1,9 +1,18 @@
 // src/pages/Templates.jsx
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/lib/AuthContext';
 import { schedulfySDK } from '@/lib/sdk';
-import { FileText, Plus, Play, Loader2, ChevronDown, ChevronUp, Sparkles, Clock } from 'lucide-react';
 import { addDays } from 'date-fns';
+import { 
+  Plus, 
+  Loader2, 
+  FileText, 
+  Sparkles, 
+  ChevronUp, 
+  ChevronDown, 
+  Clock, 
+  Play 
+} from 'lucide-react';
 
 const DEFAULT_TEMPLATES = [
   {
@@ -68,30 +77,17 @@ export default function Templates() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    if (isAuthenticated && user) {
-      loadTemplates();
-    } else if (!isLoadingAuth && !isAuthenticated) {
-      setLoading(false);
-      setError('Please log in to view templates.');
-    }
-  }, [isAuthenticated, user, isLoadingAuth]);
-
-  const loadTemplates = async () => {
+  const loadTemplates = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       
-      // Try to fetch templates from backend
       let data = [];
       try {
-        // If you have a templates endpoint, use it
-        // For now, we'll use localStorage as a fallback
         const stored = localStorage.getItem('templates');
         if (stored) {
           data = JSON.parse(stored);
         } else {
-          // Create default templates
           const created = DEFAULT_TEMPLATES.map((t, index) => ({
             ...t,
             id: `template-${index + 1}`,
@@ -103,19 +99,28 @@ export default function Templates() {
           data = created;
         }
         console.log(`✅ Loaded ${data.length} templates`);
-      } catch (err) {
-        console.error('Error loading templates:', err);
+      } catch (_err) {
+        console.error('Error loading templates:', _err);
         data = [];
       }
       
       setTemplates(data);
-    } catch (err) {
-      console.error('Error in loadTemplates:', err);
+    } catch (_err) {
+      console.error('Error in loadTemplates:', _err);
       setError('Failed to load templates. Please refresh.');
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      loadTemplates();
+    } else if (!isLoadingAuth && !isAuthenticated) {
+      setLoading(false);
+      setError('Please log in to view templates.');
+    }
+  }, [isAuthenticated, user, isLoadingAuth, loadTemplates]);
 
   const deployTemplate = async (template) => {
     try {
@@ -123,7 +128,6 @@ export default function Templates() {
       const startDate = deployDate ? new Date(deployDate) : new Date();
       setDeployingId(template.id);
 
-      // Create tasks from template subtasks
       const tasks = template.subtasks.map((st) => ({
         title: st.title,
         description: st.description || '',
@@ -136,18 +140,16 @@ export default function Templates() {
         user_id: user?.id || 'unknown'
       }));
 
-      // Send to backend
       const createdTasks = [];
       for (const task of tasks) {
         try {
           const created = await schedulfySDK.tasks.create(task);
           createdTasks.push(created);
-        } catch (err) {
-          console.error('Error creating task:', err);
+        } catch (_err) {
+          console.error('Error creating task:', _err);
         }
       }
 
-      // Update template use count
       const updatedTemplates = templates.map(t =>
         t.id === template.id ? { ...t, use_count: (t.use_count || 0) + 1 } : t
       );
@@ -157,8 +159,8 @@ export default function Templates() {
       setDeployingId(null);
       setDeployDate('');
       alert(`✅ ${createdTasks.length} tasks created from "${template.name}"!`);
-    } catch (err) {
-      console.error('Error deploying template:', err);
+    } catch (_err) {
+      console.error('Error deploying template:', _err);
       setError('Failed to deploy template. Please try again.');
       setDeployingId(null);
     }
@@ -213,8 +215,8 @@ export default function Templates() {
       });
       setShowCreate(false);
       setSaving(false);
-    } catch (err) {
-      console.error('Error saving template:', err);
+    } catch (_err) {
+      console.error('Error saving template:', _err);
       setError('Failed to save template.');
       setSaving(false);
     }

@@ -1,13 +1,9 @@
-
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react'; // ✅ Added useCallback
 import { base44 } from '@/api/base44Client';
-import { 
-  X, Clock, Tag, Pencil, Trash2, Check, Loader2, 
-  MessageSquare, Send, Paperclip, Timer, Zap, 
-  AlertTriangle, CheckCircle2, Users, UserPlus,
-  UserCheck, Crown, Mail, User
-} from 'lucide-react';
 import { format, isPast, isToday } from 'date-fns';
+
+
+
 
 const PRIORITY_COLOR = {
   low: 'text-green-400 bg-green-400/10 border-green-400/20',
@@ -45,43 +41,24 @@ export default function TaskDetailModal({ task: initialTask, onClose, onUpdate, 
   // Team members state
   const [members, setMembers] = useState([]);
   const [workspace, setWorkspace] = useState(null);
-  const [loadingMembers, setLoadingMembers] = useState(false);
+  const [_loadingMembers, setLoadingMembers] = useState(false); // ✅ Re-added
   const [showAssign, setShowAssign] = useState(false);
   const [assigning, setAssigning] = useState(false);
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
-    try {
-      // Get current user
-      const u = await base44.auth.me();
-      setUser(u);
-
-      // Load comments
-      await loadComments();
-
-      // Load workspace and members
-      await loadWorkspaceMembers(u);
-    } catch (err) {
-      console.error('Failed to load data:', err);
-    }
-  };
-
-  const loadComments = async () => {
+  // Fixed: loadComments wrapped in useCallback
+  const loadComments = useCallback(async () => {
     try {
       const data = await base44.entities.Comment.filter({ task_id: task.id }, 'created_date', 50);
       setComments(data);
     } catch (err) {
       console.error('Failed to load comments:', err);
     }
-  };
+  }, [task.id]);
 
-  const loadWorkspaceMembers = async (user) => {
+  // ✅ Fixed: loadWorkspaceMembers wrapped in useCallback
+  const loadWorkspaceMembers = useCallback(async (user) => {
     setLoadingMembers(true);
     try {
-      // Get workspace
       const workspaces = await base44.entities.Workspace.filter({ admin_id: user.id }, '-created_date', 1);
       let ws = workspaces[0];
       
@@ -92,7 +69,6 @@ export default function TaskDetailModal({ task: initialTask, onClose, onUpdate, 
 
       if (ws) {
         setWorkspace(ws);
-        // Get all users
         const allUsers = await base44.entities.User.list();
         const wsMembers = allUsers.filter(usr =>
           usr.id === ws.admin_id || (ws.member_ids && ws.member_ids.includes(usr.id))
@@ -104,7 +80,23 @@ export default function TaskDetailModal({ task: initialTask, onClose, onUpdate, 
     } finally {
       setLoadingMembers(false);
     }
-  };
+  }, []);
+
+  // ✅ Fixed: loadData wrapped in useCallback
+  const loadData = useCallback(async () => {
+    try {
+      const u = await base44.auth.me();
+      setUser(u);
+      await loadComments();
+      await loadWorkspaceMembers(u);
+    } catch (err) {
+      console.error('Failed to load data:', err);
+    }
+  }, [loadComments, loadWorkspaceMembers]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]); // ✅ Now stable
 
   const saveEdit = async () => {
     setSaving(true);
@@ -187,15 +179,9 @@ export default function TaskDetailModal({ task: initialTask, onClose, onUpdate, 
     }
   };
 
-  const getAssigneeName = (id) => {
-    const member = members.find(m => m.id === id);
-    return member?.full_name || member?.email || 'Unknown';
-  };
-
   const isOverdue = task.due_date && isPast(new Date(task.due_date)) && task.status !== 'done';
   const isDueToday = task.due_date && isToday(new Date(task.due_date));
 
-  // Get current assignee
   const currentAssignee = task.assignee_id ? members.find(m => m.id === task.assignee_id) : null;
 
   return (
@@ -402,7 +388,6 @@ export default function TaskDetailModal({ task: initialTask, onClose, onUpdate, 
             </h3>
             <div className="space-y-3">
               {comments.map(c => {
-                // Check if comment has mentions
                 const hasMentions = c.mentions && c.mentions.length > 0;
                 return (
                   <div key={c.id} className="flex gap-3">

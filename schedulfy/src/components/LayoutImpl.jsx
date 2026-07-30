@@ -1,4 +1,3 @@
-import { Link, Outlet } from 'react-router-dom';
 // React import removed (automatic JSX runtime)
 
 export default function Layout() {

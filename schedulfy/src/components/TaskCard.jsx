@@ -1,7 +1,16 @@
 import { useState } from 'react';
-import { base44 } from '@/api/base44Client';
-import { CheckCircle2, Circle, Clock, Tag, Paperclip, MessageSquare, AlertTriangle, Zap, ChevronDown } from 'lucide-react';
 import { format, isPast, isToday } from 'date-fns';
+import { 
+  CheckCircle2, 
+  Circle, 
+  Clock, 
+  Tag, 
+  Paperclip, 
+  MessageSquare, 
+  AlertTriangle, 
+  Zap, 
+  ChevronDown 
+} from 'lucide-react';
 
 const PRIORITY_CONFIG = {
   low: { label: 'Low', color: 'text-green-400', bg: 'bg-green-400/10 border-green-400/20' },
@@ -30,18 +39,33 @@ export default function TaskCard({ task, onUpdate, onDelete, onClick, compact = 
   const toggleDone = async (e) => {
     e.stopPropagation();
     if (completing) return;
+    
+    setCompleting(true);
     const newStatus = isDone ? 'todo' : 'done';
     
-    // Preserve all task properties including the ID field
+    // ✅ Get the task ID correctly
+    const taskId = task.id || task._id || task.task_id;
+    
+    console.log('📤 Toggle Done - Task ID:', taskId);
+    console.log('📤 Toggle Done - Task:', task);
+    
     const updated = { 
-      ...task,  // Spread all existing properties
+      ...task,
       status: newStatus,
       completed_at: newStatus === 'done' ? new Date().toISOString() : null,
     };
     
-    onUpdate?.(updated);
+    try {
+      // ✅ Call onUpdate with both ID and the updated task
+      await onUpdate?.(taskId, updated);
+    } catch (error) {
+      console.error('❌ Failed to update task:', error);
+    } finally {
+      setCompleting(false);
+    }
   };
 
+  // Compact view
   if (compact) {
     return (
       <div
@@ -78,6 +102,7 @@ export default function TaskCard({ task, onUpdate, onDelete, onClick, compact = 
     );
   }
 
+  // Full view
   return (
     <div
       onClick={() => onClick?.(task)}
@@ -94,6 +119,7 @@ export default function TaskCard({ task, onUpdate, onDelete, onClick, compact = 
             <Circle className="w-5 h-5 text-muted-foreground hover:text-primary transition-colors" />
           )}
         </button>
+        
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
             <p className={`font-medium text-sm leading-snug ${isDone ? 'line-through text-muted-foreground' : 'text-foreground'}`}>

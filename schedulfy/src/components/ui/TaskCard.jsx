@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { schedulfy } from '@/api/schedulfyClient';
-import { CheckCircle2, Circle, Clock, Tag, Paperclip, MessageSquare, AlertTriangle, Zap, ChevronDown } from 'lucide-react';
 import { format, isPast, isToday } from 'date-fns';
+
 
 const PRIORITY_CONFIG = {
   low: { label: 'Low', color: 'text-green-400', bg: 'bg-green-400/10 border-green-400/20' },
@@ -10,7 +10,7 @@ const PRIORITY_CONFIG = {
   urgent: { label: 'Urgent', color: 'text-destructive', bg: 'bg-destructive/10 border-destructive/20' },
 };
 
-const STATUS_CONFIG = {
+const _STATUS_CONFIG = {
   todo: { label: 'To Do', color: 'text-muted-foreground' },
   in_progress: { label: 'In Progress', color: 'text-primary' },
   done: { label: 'Done', color: 'text-green-400' },
@@ -18,10 +18,10 @@ const STATUS_CONFIG = {
   snoozed: { label: 'Snoozed', color: 'text-yellow-400' },
 };
 
-export default function TaskCard({ task, onUpdate, onDelete, onClick, compact = false }) {
+export default function TaskCard({ task, onUpdate, _onDelete, onClick, compact = false }) {
   const [completing, setCompleting] = useState(false);
   const pc = PRIORITY_CONFIG[task.priority] || PRIORITY_CONFIG.medium;
-  const sc = STATUS_CONFIG[task.status] || STATUS_CONFIG.todo;
+  // const sc = STATUS_CONFIG[task.status] || STATUS_CONFIG.todo;
 
   const isDone = task.status === 'done';
   const isOverdue = task.due_date && isPast(new Date(task.due_date)) && !isDone;

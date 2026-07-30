@@ -22,9 +22,24 @@ async function apiCall(endpoint, options = {}) {
   return response.json();
 }
 
+// Helper function to extract ID from various formats
+function extractId(id) {
+  if (!id) return null;
+  if (typeof id === 'string') return id;
+  if (typeof id === 'object') {
+    if (id.id) return String(id.id);
+    if (id._id) return String(id._id);
+    if (id.task && (id.task.id || id.task._id)) {
+      return String(id.task.id || id.task._id);
+    }
+    console.warn('ExtractId received object without id/_id:', id);
+    return null;
+  }
+  return String(id);
+}
+
 // Create axios client (for compatibility)
 export function createAxiosClient(config) {
-  // This returns a fetch-based client that mimics axios
   return {
     get: async (url) => {
       const response = await fetch(`${config.baseURL || ''}${url}`, {
@@ -75,7 +90,6 @@ export function createAxiosClient(config) {
       }
       return response.json();
     },
-    // Add other methods as needed
   };
 }
 
@@ -102,7 +116,6 @@ const auth = {
 
   getCurrentUser: () => apiCall('/auth/me'),
 
-  // Alias for getCurrentUser
   me: () => apiCall('/auth/me'),
 
   redirectToLogin: (returnUrl) => {
@@ -110,6 +123,34 @@ const auth = {
     localStorage.removeItem('demo_user');
     window.location.href = `/login?returnUrl=${encodeURIComponent(returnUrl || window.location.href)}`;
   },
+
+  // ✅ ADDED: Forgot Password
+  forgotPassword: (email) =>
+    apiCall('/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    }),
+
+  // ✅ ADDED: Reset Password
+  resetPassword: (data) =>
+    apiCall('/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  // ✅ ADDED: Verify OTP (if needed)
+  verifyOtp: (data) =>
+    apiCall('/auth/verify-otp', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  // ✅ ADDED: Resend OTP (if needed)
+  resendOtp: (email) =>
+    apiCall('/auth/resend-otp', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    }),
 };
 
 export const schedulfySDK = {
@@ -123,22 +164,40 @@ export const schedulfySDK = {
         body: JSON.stringify(taskData),
       }),
 
-    update: (id, taskData) =>
-      apiCall(`/tasks/${id}`, {
+    update: (id, taskData) => {
+      const taskId = extractId(id);
+      if (!taskId) {
+        console.error('Invalid task ID:', id);
+        throw new Error('Invalid task ID: ' + JSON.stringify(id));
+      }
+      console.log('SDK Update - ID:', taskId);
+      return apiCall(`/tasks/${taskId}`, {
         method: 'PUT',
         body: JSON.stringify(taskData),
-      }),
+      });
+    },
 
-    delete: (id) =>
-      apiCall(`/tasks/${id}`, {
+    delete: (id) => {
+      const taskId = extractId(id);
+      if (!taskId) {
+        console.error('Invalid task ID:', id);
+        throw new Error('Invalid task ID: ' + JSON.stringify(id));
+      }
+      console.log('SDK Delete - ID:', taskId);
+      return apiCall(`/tasks/${taskId}`, {
         method: 'DELETE',
-      }),
+      });
+    },
   },
-  // ============ EVENTS / TASKS ============
+
+  // ============ EVENTS ============
   events: {
     getAll: (filters = {}) => apiCall(`/events?${new URLSearchParams(filters)}`),
 
-    getById: (id) => apiCall(`/events/${id}`),
+    getById: (id) => {
+      const eventId = extractId(id);
+      return apiCall(`/events/${eventId}`);
+    },
 
     getByDate: (date) => apiCall(`/events/date/${date}`),
 
@@ -151,16 +210,20 @@ export const schedulfySDK = {
         body: JSON.stringify(eventData),
       }),
 
-    update: (id, eventData) =>
-      apiCall(`/events/${id}`, {
+    update: (id, eventData) => {
+      const eventId = extractId(id);
+      return apiCall(`/events/${eventId}`, {
         method: 'PUT',
         body: JSON.stringify(eventData),
-      }),
+      });
+    },
 
-    delete: (id) =>
-      apiCall(`/events/${id}`, {
+    delete: (id) => {
+      const eventId = extractId(id);
+      return apiCall(`/events/${eventId}`, {
         method: 'DELETE',
-      }),
+      });
+    },
   },
 
   // ============ CALENDAR VIEWS ============
@@ -186,16 +249,20 @@ export const schedulfySDK = {
         body: JSON.stringify(reminderData),
       }),
 
-    update: (id, reminderData) =>
-      apiCall(`/reminders/${id}`, {
+    update: (id, reminderData) => {
+      const reminderId = extractId(id);
+      return apiCall(`/reminders/${reminderId}`, {
         method: 'PUT',
         body: JSON.stringify(reminderData),
-      }),
+      });
+    },
 
-    delete: (id) =>
-      apiCall(`/reminders/${id}`, {
+    delete: (id) => {
+      const reminderId = extractId(id);
+      return apiCall(`/reminders/${reminderId}`, {
         method: 'DELETE',
-      }),
+      });
+    },
   },
 
   // ============ CATEGORIES / TAGS ============
@@ -208,25 +275,31 @@ export const schedulfySDK = {
         body: JSON.stringify(categoryData),
       }),
 
-    delete: (id) =>
-      apiCall(`/categories/${id}`, {
+    delete: (id) => {
+      const categoryId = extractId(id);
+      return apiCall(`/categories/${categoryId}`, {
         method: 'DELETE',
-      }),
+      });
+    },
   },
 
   // ============ DRAG & DROP SUPPORT ============
   dragAndDrop: {
-    moveEvent: (eventId, newDate, newTime) =>
-      apiCall(`/events/${eventId}/move`, {
+    moveEvent: (eventId, newDate, newTime) => {
+      const id = extractId(eventId);
+      return apiCall(`/events/${id}/move`, {
         method: 'PATCH',
         body: JSON.stringify({ date: newDate, time: newTime }),
-      }),
+      });
+    },
 
-    resizeEvent: (eventId, newDuration) =>
-      apiCall(`/events/${eventId}/resize`, {
+    resizeEvent: (eventId, newDuration) => {
+      const id = extractId(eventId);
+      return apiCall(`/events/${id}/resize`, {
         method: 'PATCH',
         body: JSON.stringify({ duration: newDuration }),
-      }),
+      });
+    },
   },
 
   // ============ RECURRING EVENTS ============
@@ -237,16 +310,20 @@ export const schedulfySDK = {
         body: JSON.stringify({ ...eventData, recurrence: recurrencePattern }),
       }),
 
-    updateRecurring: (seriesId, eventData) =>
-      apiCall(`/events/recurring/${seriesId}`, {
+    updateRecurring: (seriesId, eventData) => {
+      const id = extractId(seriesId);
+      return apiCall(`/events/recurring/${id}`, {
         method: 'PUT',
         body: JSON.stringify(eventData),
-      }),
+      });
+    },
 
-    deleteRecurring: (seriesId) =>
-      apiCall(`/events/recurring/${seriesId}`, {
+    deleteRecurring: (seriesId) => {
+      const id = extractId(seriesId);
+      return apiCall(`/events/recurring/${id}`, {
         method: 'DELETE',
-      }),
+      });
+    },
   },
 
   // ============ SEARCH ============
@@ -284,3 +361,4 @@ export const schedulfySDK = {
 
 // Export both the SDK and individual utilities
 export default schedulfySDK;
+export { apiCall };

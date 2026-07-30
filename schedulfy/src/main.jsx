@@ -1,17 +1,28 @@
-import React from 'react'
-import ReactDOM from 'react-dom/client'
-import { BrowserRouter } from 'react-router-dom'
-import { AuthProvider } from './lib/AuthContext.jsx'
-import ErrorBoundary from './components/ErrorBoundary.jsx'
-import App from './App.jsx'
-import './index.css'
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+
+import {BrowserRouter} from 'react-router-dom';
+
+import App from './App';
+import ErrorBoundary from './components/ErrorBoundary';
+import {AuthProvider} from './lib/AuthContext';
+import './index.css';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
-  <ErrorBoundary>
-    <BrowserRouter>
+  
+  <React.StrictMode>
+    <BrowserRouter 
+    future={{
+      v7_startTransition: true,
+      v7_relativeSplatPath: true,
+    }}
+    >
+    <ErrorBoundary>
       <AuthProvider>
         <App />
       </AuthProvider>
+    </ErrorBoundary>
     </BrowserRouter>
-  </ErrorBoundary>
-)
+  </React.StrictMode>
+  
+);

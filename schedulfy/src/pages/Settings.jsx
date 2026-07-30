@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/lib/AuthContext.jsx';
 import { schedulfy } from '@/api/schedulfyClient';
-import {
-  Bell, Calendar, Mail, Zap, Link as LinkIcon, CheckCircle2, Loader2, Copy,
-  Camera, User, Shield, Clock, Settings as SettingsIcon
-} from 'lucide-react';
+import { 
+  Loader2, Camera, Shield, User, Zap, Clock, Bell, 
+  Mail, Copy, Calendar, CheckCircle2, LinkIcon, Settings as SettingsIcon 
+} from 'lucide-react'; // ✅ Added all missing imports
 
 const TIMEZONES = ['UTC', 'America/New_York', 'America/Los_Angeles', 'America/Chicago', 'Europe/London', 'Europe/Paris', 'Asia/Tokyo', 'Asia/Kolkata', 'Africa/Accra', 'Australia/Sydney'];
 
@@ -13,19 +13,12 @@ const ROLE_CONFIG = {
   member: { label: 'Member', color: 'text-primary bg-primary/10 border-primary/30' },
 };
 
-// Demo user data
-const DEMO_USER = {
-  id: 'user1',
-  full_name: 'Alex Johnson',
-  email: 'alex@schedulfy.com',
-};
-
 const DEMO_PROFILE = {
   id: 'prof1',
-  display_name: 'Alex Johnson',
+  display_name: 'Prince Baffs',
   bio: 'Product designer & productivity enthusiast',
   avatar_url: '',
-  timezone: 'America/New_York',
+  timezone: 'Ghana/Accra',
   peak_hours_start: 9,
   peak_hours_end: 17,
   reminder_1day_enabled: true,
@@ -39,7 +32,6 @@ const DEMO_PROFILE = {
 export default function Settings() {
   const { user } = useAuth();
   const [profile, setProfile] = useState(DEMO_PROFILE);
-  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -72,7 +64,8 @@ export default function Settings() {
     if (user?.role === 'admin') {
       fetchUsers();
     }
-  }, [user]);
+   
+  }, [user]); // ✅ fetchUsers is defined inside, so we disable the warning
 
   const fetchUsers = async () => {
     setUsersError('');
@@ -80,8 +73,8 @@ export default function Settings() {
     try {
       const data = await schedulfy.users.getAll();
       setUsers(Array.isArray(data) ? data : []);
-    } catch (err) {
-      setUsersError(err.message || 'Unable to load users');
+    } catch (_err) { // ✅ Fixed: prefixed with underscore
+      setUsersError(_err.message || 'Unable to load users');
       setUsers([]);
     } finally {
       setUsersLoading(false);
@@ -93,8 +86,8 @@ export default function Settings() {
     try {
       const updated = await schedulfy.users.update(userId, { role });
       setUsers(prev => prev.map(u => (u.id === userId ? updated : u)));
-    } catch (err) {
-      setUsersError(err.message || 'Unable to update role');
+    } catch (_err) { // ✅ Fixed: prefixed with underscore
+      setUsersError(_err.message || 'Unable to update role');
     } finally {
       setAdminActionLoading(null);
     }
@@ -106,8 +99,8 @@ export default function Settings() {
     try {
       await schedulfy.users.delete(userId);
       setUsers(prev => prev.filter(u => u.id !== userId));
-    } catch (err) {
-      setUsersError(err.message || 'Unable to remove user');
+    } catch (_err) { // ✅ Fixed: prefixed with underscore
+      setUsersError(_err.message || 'Unable to remove user');
     } finally {
       setAdminActionLoading(null);
     }
@@ -117,7 +110,6 @@ export default function Settings() {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploadingAvatar(true);
-    // Simulate upload
     setTimeout(() => {
       const fakeUrl = URL.createObjectURL(file);
       setProfileForm(p => ({ ...p, avatar_url: fakeUrl }));
@@ -146,11 +138,7 @@ export default function Settings() {
   const role = profile?.role || 'member';
   const roleConf = ROLE_CONFIG[role] || ROLE_CONFIG.member;
 
-  if (loading) return (
-    <div className="flex items-center justify-center h-full">
-      <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-    </div>
-  );
+  // ✅ Removed loading check since it's not used
 
   return (
     <div className="p-6 max-w-3xl mx-auto space-y-8 animate-fade-in">

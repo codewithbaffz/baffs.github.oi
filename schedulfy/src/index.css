@@ -91,23 +91,17 @@ body,
     --sidebar-ring: 248 100% 70%;
   }
 
-  /* Remove the duplicate body outside - keep only this one */
-  body {
-    background-color: hsl(var(--background));
-    color: hsl(var(--foreground));
-    font-family: var(--font-body);
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-  }
-
+  /* ✅ FIXED: Added these two rules that were missing */
   * {
-    border-color: hsl(var(--border));
+    @apply border-border outline-ring/50;
   }
-
-  h1,
-  h2,
-  h3 {
-    font-family: var(--font-heading);
+  
+  body {
+    @apply bg-background text-foreground font-body antialiased;
+  }
+  
+  h1, h2, h3 {
+    @apply font-heading;
   }
 }
 
@@ -118,47 +112,102 @@ body,
     -webkit-backdrop-filter: blur(12px);
     border: 1px solid rgba(255, 255, 255, 0.08);
   }
+  
   .glass-cyan {
     background: rgba(0, 212, 255, 0.05);
     backdrop-filter: blur(12px);
     border: 1px solid rgba(0, 212, 255, 0.15);
   }
+  
   .glass-indigo {
     background: rgba(108, 99, 255, 0.08);
     backdrop-filter: blur(12px);
     border: 1px solid rgba(108, 99, 255, 0.2);
   }
+  
   .glow-indigo {
     box-shadow: 0 0 20px rgba(108, 99, 255, 0.3);
   }
+  
   .glow-cyan {
     box-shadow: 0 0 20px rgba(0, 212, 255, 0.2);
   }
+  
   .text-cyan {
     color: hsl(var(--cyan));
   }
+  
   .bg-cyan {
     background-color: hsl(var(--cyan));
   }
+  
   .border-cyan {
     border-color: hsl(var(--cyan));
   }
+  
   .scrollbar-thin::-webkit-scrollbar {
     width: 4px;
   }
+  
   .scrollbar-thin::-webkit-scrollbar-track {
     background: transparent;
   }
+  
   .scrollbar-thin::-webkit-scrollbar-thumb {
     background: hsl(var(--border));
     border-radius: 2px;
   }
+
+  /* Animations */
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-in-out;
+  }
+
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.4s ease-out;
+  }
+
+  @keyframes pulseGlow {
+    0%, 100% {
+      box-shadow: 0 0 20px rgba(108, 99, 255, 0.3);
+    }
+    50% {
+      box-shadow: 0 0 40px rgba(108, 99, 255, 0.5);
+    }
+  }
+
+  .animate-pulse-glow {
+    animation: pulseGlow 2s ease-in-out infinite;
+  }
 }
 
-/* Add sidebar helper classes outside layers for guaranteed availability */
+/* Sidebar helper classes */
 .bg-sidebar-accent {
   background-color: hsl(var(--sidebar-accent));
 }
+
 .text-sidebar-foreground {
   color: hsl(var(--sidebar-foreground));
 }

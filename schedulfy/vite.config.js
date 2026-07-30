@@ -23,4 +23,12 @@ export default defineConfig({
   css: {
     postcss: './postcss.config.cjs',
   },
+  optimizeDeps: {
+    include: ['react', 'react-dom'], 
+  },
+  build: {
+    commonjsOptions: {
+      include: [/node_modules/],
+    },
+  },
 });

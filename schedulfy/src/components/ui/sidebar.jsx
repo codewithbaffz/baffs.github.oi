@@ -1,39 +1,30 @@
 import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
 import { cva } from "class-variance-authority";
-import { PanelLeft } from "lucide-react"
 
 import { useIsMobile } from "@/hooks/use-mobile"
 import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Separator } from "@/components/ui/separator"
-import { Sheet, SheetContent } from "@/components/ui/sheet"
-import { Skeleton } from "@/components/ui/skeleton"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
+import {SIDEBAR_WIDTH} from "./sidebarConstants";
+import {useSidebar} from "@/components/ui/useSidebar";
+
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state"
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
-const SIDEBAR_WIDTH = "16rem"
+
 const SIDEBAR_WIDTH_MOBILE = "18rem"
 const SIDEBAR_WIDTH_ICON = "3rem"
 const SIDEBAR_KEYBOARD_SHORTCUT = "b"
 
-const SidebarContext = React.createContext(null)
+// const SidebarContext = React.createContext(null)
 
-function useSidebar() {
-  const context = React.useContext(SidebarContext)
-  if (!context) {
-    throw new Error("useSidebar must be used within a SidebarProvider.")
-  }
+// function useSidebar() {
+//   const context = React.useContext(SidebarContext)
+//   if (!context) {
+//     throw new Error("useSidebar must be used within a SidebarProvider.")
+//   }
 
-  return context
-}
+//   return context
+// }
 
 const SidebarProvider = React.forwardRef((
   {
@@ -357,7 +348,7 @@ const SidebarGroup = React.forwardRef(({ className, ...props }, ref) => {
 SidebarGroup.displayName = "SidebarGroup"
 
 const SidebarGroupLabel = React.forwardRef(({ className, asChild = false, ...props }, ref) => {
-  const Comp = asChild ? Slot : "div"
+  const _Comp = asChild ? Slot : "div"
 
   return (
     (<Comp
@@ -374,7 +365,7 @@ const SidebarGroupLabel = React.forwardRef(({ className, asChild = false, ...pro
 SidebarGroupLabel.displayName = "SidebarGroupLabel"
 
 const SidebarGroupAction = React.forwardRef(({ className, asChild = false, ...props }, ref) => {
-  const Comp = asChild ? Slot : "button"
+  const _Comp = asChild ? Slot : "button"
 
   return (
     (<Comp
@@ -453,7 +444,7 @@ const SidebarMenuButton = React.forwardRef((
   },
   ref
 ) => {
-  const Comp = asChild ? Slot : "button"
+  const _Comp = asChild ? Slot : "button"
   const { isMobile, state } = useSidebar()
 
   const button = (
@@ -490,7 +481,7 @@ const SidebarMenuButton = React.forwardRef((
 SidebarMenuButton.displayName = "SidebarMenuButton"
 
 const SidebarMenuAction = React.forwardRef(({ className, asChild = false, showOnHover = false, ...props }, ref) => {
-  const Comp = asChild ? Slot : "button"
+  const _Comp = asChild ? Slot : "button"
 
   return (
     (<Comp
@@ -576,10 +567,10 @@ SidebarMenuSubItem.displayName = "SidebarMenuSubItem"
 
 const SidebarMenuSubButton = React.forwardRef(
   ({ asChild = false, size = "md", isActive, className, ...props }, ref) => {
-    const Comp = asChild ? Slot : "a"
+    const _Comp = asChild ? Slot : "a"
 
     return (
-      (<Comp
+      (<_Comp
         ref={ref}
         data-sidebar="menu-sub-button"
         data-size={size}
@@ -622,5 +613,5 @@ export {
   SidebarRail,
   SidebarSeparator,
   SidebarTrigger,
-  useSidebar,
+  
 }

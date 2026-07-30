@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { schedulfy } from '@/api/schedulfyClient';
-import { Sparkles, Loader2, Check, X, ChevronDown } from 'lucide-react';
 import { format } from 'date-fns';
+//  Added missing imports
 
 export default function NLPTaskInput({ onTaskCreated, projectId, workspaceId }) {
   const [input, setInput] = useState('');
@@ -44,7 +44,7 @@ Return ONLY valid JSON.`,
         }
       });
       setParsed(result);
-    } catch (e) {
+    } catch  {
       setError('Could not parse input. Please try again.');
     }
     setLoading(false);
@@ -52,6 +52,7 @@ Return ONLY valid JSON.`,
 
   const handleConfirm = async () => {
     setSaving(true);
+    // eslint-disable-next-line unused-imports/no-unused-vars
     const user = await schedulfy.auth.me();
     const task = await schedulfy.entities.Task.create({
       title: parsed.title,

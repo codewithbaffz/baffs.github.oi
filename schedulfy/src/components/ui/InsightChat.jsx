@@ -1,7 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
 import { schedulfy } from '@/api/schedulfyClient';
-import { Brain, Send, Loader2, Sparkles, User } from 'lucide-react';
-import ReactMarkdown from 'react-markdown';
 
 const SUGGESTED = [
   'What are my biggest productivity blockers?',

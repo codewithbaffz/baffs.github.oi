@@ -1,47 +1,61 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { CheckCircle2, Clock, AlertTriangle, Zap, TrendingUp, Plus, ArrowRight, Target, Timer, Sparkles } from 'lucide-react';
-import { format, isToday, isTomorrow, isPast, startOfDay, endOfDay, addDays } from 'date-fns';
+import { 
+  CheckCircle2, 
+  Clock, 
+  AlertTriangle, 
+  Timer, 
+  Sparkles,
+  Target,
+  ArrowRight,
+  Zap,
+  TrendingUp,
+  Plus
+} from 'lucide-react';
+import { format, isToday, isPast, endOfDay } from 'date-fns';
+import { useTasks } from '@/context/TaskContext';
 import TaskCard from '@/components/TaskCard';
 import NLPTaskInput from '@/components/NLPTaskInput';
-import { useTasks } from '@/context/TaskContext'; // ✅ Import the hook
 
 export default function Dashboard() {
-  // ✅ Use the global task context instead of local state
-  const { tasks, loading, createTask, updateTask, deleteTask } = useTasks();
+  const { tasks, loading, createTask, updateTask, deleteTask, fetchTasks } = useTasks();
   
   const [user, setUser] = useState(null);
   const [recentSessions, setRecentSessions] = useState([]);
   const [showNLP, setShowNLP] = useState(false);
 
-  // Load user data when backend is available
   useEffect(() => {
     loadUserData();
   }, []);
 
   const loadUserData = async () => {
     try {
-      // Dynamically import base44 if needed
-      const { base44 } = await import('@/api/base44Client');
-      const u = await base44.auth.me();
-      setUser(u);
+      const storedUser = localStorage.getItem('user');
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
+        return;
+      }
       
-      // Load focus sessions if available
+      const { schedulfySDK } = await import('@/lib/sdk');
+      const u = await schedulfySDK.auth.me();
+      setUser(u);
+      localStorage.setItem('user', JSON.stringify(u));
+      
       try {
-        const sessions = await base44.entities.FocusSession.filter({ user_id: u.id }, '-created_date', 5);
+        const sessions = [];
         setRecentSessions(sessions);
-      } catch (err) {
+      } catch {
         console.log('Focus sessions not available');
         setRecentSessions([]);
       }
-    } catch (err) {
+    } catch {
       console.log('Backend not available - using demo user');
-      // Fallback to demo user
-      setUser({ full_name: 'Kojo Baffs', id: 'demo' });
+      const demoUser = { full_name: 'Kojo Baffs', id: 'demo' };
+      setUser(demoUser);
+      localStorage.setItem('user', JSON.stringify(demoUser));
     }
   };
 
-  // Demo data for testing when no tasks exist
   const demoTasks = [
     { id: 'demo-1', title: 'Complete project proposal', status: 'todo', due_date: new Date().toISOString(), priority: 'high' },
     { id: 'demo-2', title: 'Review team updates', status: 'in_progress', due_date: new Date().toISOString(), priority: 'medium' },
@@ -50,21 +64,57 @@ export default function Dashboard() {
     { id: 'demo-5', title: 'Fix navigation bug', status: 'todo', due_date: new Date(Date.now() - 172800000).toISOString(), priority: 'urgent' },
   ];
 
-  // Use real tasks if available, otherwise use demo data
-  const displayTasks = tasks.length > 0 ? tasks : demoTasks;
+  // ✅ Use useMemo to ensure derived data updates when tasks change
+  const displayTasks = useMemo(() => {
+    return tasks && tasks.length > 0 ? tasks : demoTasks;
+  }, [tasks]);
 
-  // Calculate metrics from displayTasks
-  const todayTasks = displayTasks.filter(t => t.due_date && isToday(new Date(t.due_date)) && t.status !== 'done');
-  const overdueTasks = displayTasks.filter(t => t.due_date && isPast(new Date(t.due_date)) && !isToday(new Date(t.due_date)) && t.status !== 'done');
-  const upcomingTasks = displayTasks.filter(t => t.due_date && new Date(t.due_date) > endOfDay(new Date()) && t.status !== 'done').slice(0, 5);
-  const doneTasks = displayTasks.filter(t => t.status === 'done');
-  const completionRate = displayTasks.length > 0 ? Math.round((doneTasks.length / displayTasks.length) * 100) : 0;
+  const todayTasks = useMemo(() => {
+    return displayTasks.filter(t => t.due_date && isToday(new Date(t.due_date)) && t.status !== 'done');
+  }, [displayTasks]);
 
-  // Handle task updates via context
-  const handleTaskUpdate = async (updatedTask) => {
+  const overdueTasks = useMemo(() => {
+    return displayTasks.filter(t => t.due_date && isPast(new Date(t.due_date)) && !isToday(new Date(t.due_date)) && t.status !== 'done');
+  }, [displayTasks]);
+
+  const upcomingTasks = useMemo(() => {
+    return displayTasks.filter(t => t.due_date && new Date(t.due_date) > endOfDay(new Date()) && t.status !== 'done').slice(0, 5);
+  }, [displayTasks]);
+
+  const doneTasks = useMemo(() => {
+    return displayTasks.filter(t => t.status === 'done');
+  }, [displayTasks]);
+
+  const completionRate = useMemo(() => {
+    return displayTasks.length > 0 ? Math.round((doneTasks.length / displayTasks.length) * 100) : 0;
+  }, [displayTasks, doneTasks]);
+
+  const handleTaskUpdate = async (taskIdOrUpdated, updatedTaskData) => {
     try {
-      const taskId = updatedTask.id || updatedTask._id || updatedTask.task_id;
-      await updateTask(taskId, updatedTask);
+      let taskId;
+      let taskData;
+      
+      if (updatedTaskData) {
+        taskId = taskIdOrUpdated;
+        taskData = updatedTaskData;
+      } else {
+        taskData = taskIdOrUpdated;
+        taskId = taskData._id || taskData.id || taskData.task_id;
+      }
+      
+      console.log('📤 Dashboard Update - ID:', taskId);
+      console.log('📤 Dashboard Update - Data:', taskData);
+      
+      if (taskId) {
+        const result = await updateTask(taskId, taskData);
+        if (result.success) {
+          console.log('✅ Task updated successfully');
+          // ✅ Force a refresh to ensure UI updates
+          await fetchTasks();
+        }
+      } else {
+        console.error('❌ No task ID found');
+      }
     } catch (err) {
       console.error('Failed to update task:', err);
     }
@@ -84,6 +134,14 @@ export default function Dashboard() {
     }
   };
 
+  const handleTaskDelete = async (taskId) => {
+    try {
+      await deleteTask(taskId);
+    } catch (err) {
+      console.error('Failed to delete task:', err);
+    }
+  };
+
   const stats = [
     { label: 'Due Today', value: todayTasks.length, icon: Clock, color: 'text-yellow-400', bg: 'bg-yellow-400/10 border-yellow-400/20' },
     { label: 'Overdue', value: overdueTasks.length, icon: AlertTriangle, color: 'text-destructive', bg: 'bg-destructive/10 border-destructive/20' },
@@ -99,8 +157,6 @@ export default function Dashboard() {
 
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
-  
-  // Get user's first name for greeting
   const firstName = user?.full_name?.split(' ')[0] || 'Kojo Baffs';
 
   return (
@@ -109,7 +165,7 @@ export default function Dashboard() {
       <div className="flex items-start justify-between">
         <div>
           <h1 className="font-heading text-3xl font-bold tracking-wide text-foreground">
-            {greeting}, {firstName}
+            {greeting}, {firstName} 👋
           </h1>
           <p className="text-muted-foreground mt-1 text-sm">
             {format(new Date(), 'EEEE, MMMM do yyyy')} · {todayTasks.length} task{todayTasks.length !== 1 ? 's' : ''} due today
@@ -193,13 +249,14 @@ export default function Dashboard() {
               </p>
               <div className="space-y-2">
                 {overdueTasks.slice(0, 2).map(task => {
-                  const key = task.id || task._id || task.task_id || `overdue-${task.title}`;
+                  const taskId = task._id || task.id || task.task_id;
                   return (
                     <TaskCard 
-                      key={key} 
+                      key={taskId} 
                       task={task} 
                       compact 
-                      onUpdate={handleTaskUpdate} 
+                      onUpdate={handleTaskUpdate}
+                      onDelete={handleTaskDelete}
                     />
                   );
                 })}
@@ -216,12 +273,13 @@ export default function Dashboard() {
           ) : (
             <div className="space-y-2">
               {todayTasks.map(task => {
-                const key = task.id || task._id || task.task_id || `today-${task.title}`;
+                const taskId = task._id || task.id || task.task_id;
                 return (
                   <TaskCard 
-                    key={key} 
+                    key={taskId} 
                     task={task} 
-                    onUpdate={handleTaskUpdate} 
+                    onUpdate={handleTaskUpdate}
+                    onDelete={handleTaskDelete}
                   />
                 );
               })}
@@ -239,13 +297,14 @@ export default function Dashboard() {
             ) : (
               <div className="space-y-2">
                 {upcomingTasks.map(task => {
-                  const key = task.id || task._id || task.task_id || `upcoming-${task.title}`;
+                  const taskId = task._id || task.id || task.task_id;
                   return (
                     <TaskCard 
-                      key={key} 
+                      key={taskId} 
                       task={task} 
                       compact 
-                      onUpdate={handleTaskUpdate} 
+                      onUpdate={handleTaskUpdate}
+                      onDelete={handleTaskDelete}
                     />
                   );
                 })}
@@ -261,9 +320,9 @@ export default function Dashboard() {
             </div>
             <p className="text-sm text-foreground leading-relaxed">
               {completionRate >= 70
-                ? "🎯 You're crushing it! " + completionRate + "% completion rate. Consider taking on a stretch goal today."
+                ? `🎯 You're crushing it! ${completionRate}% completion rate. Consider taking on a stretch goal today.`
                 : completionRate >= 40
-                ? "⚡ Good momentum. Focus on your " + overdueTasks.length + " overdue task" + (overdueTasks.length !== 1 ? 's' : '') + " first to clear the backlog."
+                ? `⚡ Good momentum. Focus on your ${overdueTasks.length} overdue task${overdueTasks.length !== 1 ? 's' : ''} first to clear the backlog.`
                 : "💡 Start small — pick your single most important task and work on it in a 25-minute Focus session."
               }
             </p>

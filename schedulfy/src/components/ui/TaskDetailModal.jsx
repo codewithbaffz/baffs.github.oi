@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { schedulfy } from '@/api/schedulfyClient';
-import { X, Clock, Tag, Pencil, Trash2, Check, Loader2, MessageSquare, Send, Paperclip, Timer, Zap, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { format, isPast, isToday } from 'date-fns';
+
+
 
 const PRIORITY_COLOR = {
   low: 'text-green-400 bg-green-400/10 border-green-400/20',
@@ -10,12 +11,24 @@ const PRIORITY_COLOR = {
   urgent: 'text-destructive bg-destructive/10 border-destructive/20',
 };
 
-const STATUS_LABEL = { todo: 'To Do', in_progress: 'In Progress', done: 'Done', overdue: 'Overdue', snoozed: 'Snoozed' };
+const STATUS_LABEL = { 
+  todo: 'To Do', 
+  in_progress: 'In Progress', 
+  done: 'Done', 
+  overdue: 'Overdue', 
+  snoozed: 'Snoozed' 
+};
 
 export default function TaskDetailModal({ task: initialTask, onClose, onUpdate, onDelete }) {
   const [task, setTask] = useState(initialTask);
   const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState({ title: task.title, description: task.description || '', priority: task.priority, status: task.status, due_date: task.due_date ? task.due_date.slice(0, 16) : '' });
+  const [form, setForm] = useState({ 
+    title: task.title, 
+    description: task.description || '', 
+    priority: task.priority, 
+    status: task.status, 
+    due_date: task.due_date ? task.due_date.slice(0, 16) : '' 
+  });
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
   const [saving, setSaving] = useState(false);
@@ -23,15 +36,16 @@ export default function TaskDetailModal({ task: initialTask, onClose, onUpdate, 
   const [deleting, setDeleting] = useState(false);
   const [user, setUser] = useState(null);
 
+  // ✅ Fixed: loadComments wrapped in useCallback
+  const loadComments = useCallback(async () => {
+    const data = await schedulfy.entities.Comment.filter({ task_id: task.id }, 'created_date', 50);
+    setComments(data);
+  }, [task.id]);
+
   useEffect(() => {
     loadComments();
     schedulfy.auth.me().then(setUser);
-  }, []);
-
-  const loadComments = async () => {
-    const data = await schedulfy.entities.Comment.filter({ task_id: task.id }, 'created_date', 50);
-    setComments(data);
-  };
+  }, [loadComments]);
 
   const saveEdit = async () => {
     setSaving(true);

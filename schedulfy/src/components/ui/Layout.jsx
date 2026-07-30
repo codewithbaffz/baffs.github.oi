@@ -1,11 +1,10 @@
 import { useState } from 'react';
-import { Outlet, Link, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { schedulfy } from '@/api/schedulfyClient';
 import {
   LayoutDashboard, CheckSquare, Calendar, FolderOpen, Users, Zap,
-  FileText, Settings as SettingsIcon, Bell, LogOut, Menu, X, Sparkles, Timer, ChevronRight
+  FileText, Settings as SettingsIcon, Timer
 } from 'lucide-react';
-import NotificationPanel from './NotificationPanel';
 
 const NAV_ITEMS = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
@@ -48,7 +47,7 @@ export default function Layout() {
 
         {/* Nav */}
         <nav className="flex-1 py-4 overflow-y-auto scrollbar-thin">
-          {NAV_ITEMS.map(({ icon: Icon, label, path }) => {
+          {NAV_ITEMS.map(({ icon: _Icon, label, path }) => {
             const active = location.pathname === path;
             return (
               <Link

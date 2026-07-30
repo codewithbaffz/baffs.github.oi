@@ -1,115 +1,156 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { schedulfy } from '@/api/schedulfyClient';
+// TaskContext.jsx
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { useAuth } from '@/lib/AuthContext';
+import schedulfySDK from '@/lib/sdk';
 
 const TaskContext = createContext();
 
-export function TaskProvider({ children }) {
+export const TaskProvider = ({ children }) => {
+  const { isAuthenticated, user } = useAuth();
   const [tasks, setTasks] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [isSubscribed, setIsSubscribed] = useState(false);
 
-  // Load initial tasks
-  const loadTasks = useCallback(async () => {
-    setLoading(true);
+  // Helper function to get task ID
+  const getTaskId = (task) => {
+    return task?.id || task?._id || task?.task_id || null;
+  };
+
+  const fetchTasks = useCallback(async () => {
+    if (!isAuthenticated || !user) {
+      setTasks([]);
+      return;
+    }
+
     try {
-      const data = await schedulfy.tasks.getAll();
-      setTasks(Array.isArray(data) ? data : []);
+      setLoading(true);
       setError(null);
+      
+      const data = await schedulfySDK.tasks.getAll();
+      console.log('📋 Fetched tasks:', data);
+      setTasks(data || []);
     } catch (err) {
-      setError(err.message || 'Failed to load tasks');
       console.error('Error loading tasks:', err);
+      setError(err.message || 'Failed to load tasks');
+      
+      if (err.status === 401) {
+        localStorage.removeItem('authToken');
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [isAuthenticated, user]);
+
+  const createTask = useCallback(async (taskData) => {
+    try {
+      setLoading(true);
+      const newTask = await schedulfySDK.tasks.create(taskData);
+      console.log('✅ Created task:', newTask);
+      setTasks(prev => [...prev, newTask]);
+      return { success: true, data: newTask };
+    } catch (err) {
+      console.error('Error creating task:', err);
+      setError(err.message || 'Failed to create task');
+      return { success: false, error: err.message };
     } finally {
       setLoading(false);
     }
   }, []);
 
-  // CRUD operations with automatic state updates
-  const createTask = useCallback(async (taskData) => {
+  const updateTask = useCallback(async (taskId, updates) => {
     try {
-      const created = await schedulfy.tasks.create(taskData);
-      setTasks(prev => [created, ...prev]);
-      return created;
+      setLoading(true);
+      
+      console.log('📤 updateTask - ID received:', taskId);
+      console.log('📤 updateTask - Updates:', updates);
+      
+      if (!taskId) {
+        console.error('❌ No task ID provided');
+        return { success: false, error: 'No task ID provided' };
+      }
+      
+      const updatedTask = await schedulfySDK.tasks.update(taskId, updates);
+      console.log('✅ Updated task received:', updatedTask);
+      
+      // ✅ FIX: Check BOTH id AND _id fields
+      setTasks(prev => {
+        const newTasks = prev.map(task => {
+          const currentId = getTaskId(task);
+          if (String(currentId) === String(taskId)) {
+            console.log('✅ Updating task in state:', taskId);
+            return updatedTask;
+          }
+          return task;
+        });
+        console.log('📊 Updated tasks count:', newTasks.length);
+        return newTasks;
+      });
+      
+      return { success: true, data: updatedTask };
     } catch (err) {
-      setError(err.message || 'Failed to create task');
-      throw err;
-    }
-  }, []);
-
-  const updateTask = useCallback(async (id, updates) => {
-    try {
-      const updated = await schedulfy.tasks.update(id, updates);
-      setTasks(prev => prev.map(task => {
-        const taskId = task.id || task._id || task.task_id;
-        const updateId = updated.id || updated._id || updated.task_id;
-        return taskId === updateId ? updated : task;
-      }));
-      return updated;
-    } catch (err) {
+      console.error('❌ Error updating task:', err);
       setError(err.message || 'Failed to update task');
-      throw err;
+      return { success: false, error: err.message };
+    } finally {
+      setLoading(false);
     }
   }, []);
 
-  const deleteTask = useCallback(async (id) => {
+  const deleteTask = useCallback(async (taskId) => {
     try {
-      await schedulfy.tasks.delete(id);
-      setTasks(prev => prev.filter(task => {
-        const taskId = task.id || task._id || task.task_id;
-        return taskId !== id;
-      }));
+      setLoading(true);
+      
+      if (!taskId) {
+        console.error('❌ No task ID provided for deletion');
+        return { success: false, error: 'No task ID provided' };
+      }
+      
+      await schedulfySDK.tasks.delete(taskId);
+      
+      setTasks(prev => {
+        const newTasks = prev.filter(task => {
+          const currentId = getTaskId(task);
+          return String(currentId) !== String(taskId);
+        });
+        console.log('🗑️ Deleted task, remaining:', newTasks.length);
+        return newTasks;
+      });
+      
+      return { success: true };
     } catch (err) {
+      console.error('Error deleting task:', err);
       setError(err.message || 'Failed to delete task');
-      throw err;
+      return { success: false, error: err.message };
+    } finally {
+      setLoading(false);
     }
   }, []);
 
-  // Polling subscription (fallback if WebSocket not available)
-  const subscribe = useCallback(() => {
-    if (isSubscribed) return;
-
-    const interval = setInterval(() => {
-      loadTasks();
-    }, 30000); // Poll every 30 seconds
-
-    setIsSubscribed(true);
-    return () => {
-      clearInterval(interval);
-      setIsSubscribed(false);
-    };
-  }, [isSubscribed, loadTasks]);
-
-  // Auto-load and subscribe on mount
   useEffect(() => {
-    loadTasks();
-    const unsubscribe = subscribe();
-    return () => unsubscribe?.();
-  }, []); // Empty deps - run once on mount
-
-  const value = {
-    tasks,
-    loading,
-    error,
-    loadTasks,
-    createTask,
-    updateTask,
-    deleteTask,
-    subscribe,
-    isSubscribed,
-  };
+    fetchTasks();
+  }, [fetchTasks]);
 
   return (
-    <TaskContext.Provider value={value}>
+    <TaskContext.Provider
+      value={{
+        tasks,
+        loading,
+        error,
+        fetchTasks,
+        createTask,
+        updateTask,
+        deleteTask,
+      }}
+    >
       {children}
     </TaskContext.Provider>
   );
-}
+};
 
-// Custom hook for using the task context
-export function useTasks() {
+export const useTasks = () => {
   const context = useContext(TaskContext);
   if (!context) {
     throw new Error('useTasks must be used within a TaskProvider');
   }
   return context;
-}
+};

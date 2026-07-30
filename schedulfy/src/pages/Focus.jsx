@@ -1,5 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
-import { Timer, Play, Pause, RotateCcw, CheckCircle2, Coffee, Zap, Target, Clock } from 'lucide-react';
+import { 
+  Timer, 
+  Coffee, 
+  Zap, 
+  RotateCcw,  // ✅ Added
+  Play,        // ✅ Added
+  Pause,       // ✅ Added
+  Clock,       // ✅ Added
+  CheckCircle2 // ✅ Added
+} from 'lucide-react';
 import { format } from 'date-fns';
 
 const WORK_MINS = 25;
@@ -14,7 +23,7 @@ const DEMO_SESSIONS = [
 ];
 
 export default function Focus() {
-  const [tasks, setTasks] = useState([]);
+  const [tasks] = useState([]);
   const [selectedTask, setSelectedTask] = useState(null);
   const [sessions, setSessions] = useState(DEMO_SESSIONS);
   const [mode, setMode] = useState('work');
@@ -22,8 +31,6 @@ export default function Focus() {
   const [running, setRunning] = useState(false);
   const [cyclesDone, setCyclesDone] = useState(0);
   const [sessionId, setSessionId] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [user, setUser] = useState(null);
   const intervalRef = useRef(null);
   const startTimeRef = useRef(null);
 
@@ -44,6 +51,7 @@ export default function Focus() {
       clearInterval(intervalRef.current);
     }
     return () => clearInterval(intervalRef.current);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [running, mode]);
 
   const handleTimerComplete = () => {
@@ -52,7 +60,6 @@ export default function Focus() {
       const newCycles = cyclesDone + 1;
       setCyclesDone(newCycles);
       
-      // Add completed session locally
       if (sessionId) {
         setSessions(prev => prev.map(s => 
           s.id === sessionId 
@@ -76,7 +83,9 @@ export default function Focus() {
     // Play notification sound
     try {
       new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAA').play().catch(() => {});
-    } catch (e) {}
+    } catch {
+      console.log('Audio notification not available');
+    }
   };
 
   const startTimer = () => {
@@ -157,7 +166,8 @@ export default function Focus() {
               <circle cx="110" cy="110" r="88" fill="none" stroke="hsl(var(--secondary))" strokeWidth="8" />
               <circle
                 cx="110" cy="110" r="88" fill="none"
-                stroke={mc.ring} strokeWidth="8"
+                stroke={mc.ring}
+                strokeWidth="8"
                 strokeDasharray={circumference}
                 strokeDashoffset={dashOffset}
                 strokeLinecap="round"

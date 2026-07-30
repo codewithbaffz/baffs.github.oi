@@ -1,4 +1,4 @@
-/* eslint-disable react-refresh/only-export-components, unused-imports/no-unused-imports, unused-imports/no-unused-vars */
+/* eslint-disable react-refresh/only-export-components, unused-imports/no-unused-vars */
 import * as React from 'react';
 import { Slot } from '@radix-ui/react-slot';
 import { cva } from 'class-variance-authority';

@@ -1,5 +1,16 @@
 import { useState } from 'react';
-import { Users, Plus, Crown, UserCheck, Mail, Loader2, Send, UserPlus, Briefcase, CheckSquare, Clock } from 'lucide-react';
+import { 
+  Users, 
+  UserCheck, 
+  CheckSquare, 
+  Briefcase,
+  UserPlus,
+  Crown,
+  Plus,
+  Mail,
+  Send,
+  Loader2
+} from 'lucide-react';
 
 // Demo data
 const DEMO_WORKSPACE = {
@@ -34,15 +45,15 @@ const DEMO_TASKS = [
 export default function Team() {
   const [workspace, setWorkspace] = useState(DEMO_WORKSPACE);
   const [members, setMembers] = useState(DEMO_MEMBERS);
-  const [tasks, setTasks] = useState(DEMO_TASKS);
-  const [loading, setLoading] = useState(false);
+  const [tasks] = useState(DEMO_TASKS);
+  const [loading] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [showInvite, setShowInvite] = useState(false);
   const [wsForm, setWsForm] = useState({ name: '', description: '' });
   const [inviteEmail, setInviteEmail] = useState('');
   const [saving, setSaving] = useState(false);
   const [inviting, setInviting] = useState(false);
-  const [user, setUser] = useState({ id: 'user1', full_name: 'Prince Baffs' });
+  const [user] = useState({ id: 'user1', full_name: 'Prince Baffs' });
 
   const createWorkspace = () => {
     if (!wsForm.name.trim()) return;

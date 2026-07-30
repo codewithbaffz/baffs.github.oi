@@ -1,9 +1,14 @@
 import { useState, useEffect } from 'react';
-import { Plus, FolderOpen, Users, CheckSquare, Loader2, X, ChevronRight, Trash2, Circle, CheckCircle2, Calendar, Clock, Filter } from 'lucide-react';
-import { format, isPast, isToday } from 'date-fns';
+import { isPast } from 'date-fns';
+import { useTasks } from '@/context/TaskContext';
+import { 
+  Plus, Trash2, X, Sparkles, CheckSquare, Clock, ChevronRight, 
+  Filter, Loader2, FolderOpen, Users, UserPlus, User, 
+  ChevronDown, Check, Calendar as CalendarIcon, Flag, Send,
+  UserCheck
+} from 'lucide-react';
 import TaskCard from '@/components/TaskCard';
 import NLPTaskInput from '@/components/NLPTaskInput';
-import { useTasks } from '@/context/TaskContext';
 
 const STATUS_COLOR = {
   active: 'text-green-400 bg-green-400/10 border-green-400/20',
@@ -13,6 +18,14 @@ const STATUS_COLOR = {
 };
 
 const PROJECT_COLORS = ['#6C63FF', '#00D4FF', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
+
+// Demo team members
+const DEMO_TEAM_MEMBERS = [
+  { id: 'user1', name: 'Alex Johnson', email: 'alex@example.com', avatar: 'https://ui-avatars.com/api/?name=Alex+Johnson&background=6C63FF&color=fff' },
+  { id: 'user2', name: 'Sarah Chen', email: 'sarah@example.com', avatar: 'https://ui-avatars.com/api/?name=Sarah+Chen&background=00D4FF&color=fff' },
+  { id: 'user3', name: 'Mike Rivera', email: 'mike@example.com', avatar: 'https://ui-avatars.com/api/?name=Mike+Rivera&background=10B981&color=fff' },
+  { id: 'user4', name: 'Emma Williams', email: 'emma@example.com', avatar: 'https://ui-avatars.com/api/?name=Emma+Williams&background=F59E0B&color=fff' },
+];
 
 // Demo data for when backend is not available
 const DEMO_PROJECTS = [
@@ -27,22 +40,35 @@ const VIEW_OPTIONS = ['All', 'Todo', 'In Progress', 'Done', 'Overdue'];
 const SORT_OPTIONS = ['Due Date', 'Priority', 'Created Date'];
 
 export default function Projects() {
-  // Use the global task context
   const { tasks, loading: tasksLoading, createTask, updateTask, deleteTask } = useTasks();
   
   const [projects, setProjects] = useState(DEMO_PROJECTS);
   const [selectedProject, setSelectedProject] = useState(null);
+  const [teamMembers, setTeamMembers] = useState(DEMO_TEAM_MEMBERS);
   const [loading, setLoading] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [showAddTask, setShowAddTask] = useState(false);
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [selectedTaskForAssign, setSelectedTaskForAssign] = useState(null);
   const [form, setForm] = useState({ name: '', description: '', color: '#6C63FF', due_date: '' });
   const [saving, setSaving] = useState(false);
+  
+  // ✅ Manual task creation state
+  const [manualTaskTitle, setManualTaskTitle] = useState('');
+  const [manualTaskDescription, setManualTaskDescription] = useState('');
+  const [manualTaskPriority, setManualTaskPriority] = useState('medium');
+  const [manualTaskDueDate, setManualTaskDueDate] = useState('');
+  const [manualTaskAssignee, setManualTaskAssignee] = useState('');
+  const [isManualCreating, setIsManualCreating] = useState(false);
   
   // Advanced features: Filtering, Sorting, Search
   const [taskView, setTaskView] = useState('All');
   const [sortBy, setSortBy] = useState('Due Date');
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
+  
+  // ✅ NEW: Filter by assignee
+  const [assigneeFilter, setAssigneeFilter] = useState('all');
 
   // Load projects from backend if available
   useEffect(() => {
@@ -58,7 +84,7 @@ export default function Projects() {
       if (data && data.length > 0) {
         setProjects(data);
       }
-    } catch (err) {
+    } catch {
       console.log('Projects backend not available - using demo data');
     } finally {
       setLoading(false);
@@ -83,7 +109,7 @@ export default function Projects() {
       const created = await base44.entities.Project.create(newProject);
       setProjects(prev => [created, ...prev]);
       setSelectedProject(created);
-    } catch (err) {
+    } catch {
       // Fallback: save locally
       const newProject = {
         id: Date.now().toString(),
@@ -109,7 +135,7 @@ export default function Projects() {
     try {
       const { base44 } = await import('@/api/base44Client');
       await base44.entities.Project.delete(id);
-    } catch (err) {
+    } catch {
       console.log('Failed to delete project from backend');
     }
     
@@ -130,7 +156,7 @@ export default function Projects() {
       if (selectedProject?.id === projectId) {
         setSelectedProject(prev => ({ ...prev, status: newStatus }));
       }
-    } catch (err) {
+    } catch {
       // Fallback: update locally
       setProjects(prev => prev.map(p => p.id === projectId ? { ...p, status: newStatus } : p));
       if (selectedProject?.id === projectId) {
@@ -139,14 +165,62 @@ export default function Projects() {
     }
   };
 
+  // Assign task to team member
+  const assignTaskToMember = async (taskId, memberId) => {
+    try {
+      const task = tasks.find(t => (t.id || t._id) === taskId);
+      if (!task) return;
+      
+      const updatedTask = { 
+        ...task, 
+        assignee_id: memberId,
+        assignee_name: teamMembers.find(m => m.id === memberId)?.name || null
+      };
+      
+      await updateTask(taskId, updatedTask);
+      setShowAssignModal(false);
+      setSelectedTaskForAssign(null);
+    } catch (error) {
+      console.error('Failed to assign task:', error);
+    }
+  };
+
+  // Unassign task
+  const unassignTask = async (taskId) => {
+    try {
+      const task = tasks.find(t => (t.id || t._id) === taskId);
+      if (!task) return;
+      
+      const updatedTask = { 
+        ...task, 
+        assignee_id: null,
+        assignee_name: null
+      };
+      
+      await updateTask(taskId, updatedTask);
+    } catch (error) {
+      console.error('Failed to unassign task:', error);
+    }
+  };
+
   // Get tasks for a specific project from the global task context
   const getProjectTasks = (projectId) => {
     return tasks.filter(t => t.project_id === projectId);
   };
 
+  // ✅ Get assigned tasks for a specific member
+  const getTasksForMember = (memberId) => {
+    return tasks.filter(t => t.assignee_id === memberId);
+  };
+
   // Filter and sort tasks
   const getFilteredAndSortedTasks = (projectId) => {
     let filtered = getProjectTasks(projectId);
+    
+    // ✅ Filter by assignee
+    if (assigneeFilter !== 'all') {
+      filtered = filtered.filter(t => t.assignee_id === assigneeFilter);
+    }
     
     // Filter by view
     if (taskView !== 'All') {
@@ -213,16 +287,16 @@ export default function Projects() {
   };
 
   // Handle task updates using the context
-  const handleTaskUpdate = async (updatedTask) => {
+  const handleTaskUpdate = async (taskId, updatedTask) => {
     try {
-      const taskId = updatedTask.id || updatedTask._id || updatedTask.task_id;
-      await updateTask(taskId, updatedTask);
+      const id = taskId || updatedTask.id || updatedTask._id || updatedTask.task_id;
+      await updateTask(id, updatedTask);
     } catch (err) {
       console.error('Failed to update task:', err);
     }
   };
 
-  // ✅ FIXED: Handle task creation with project association
+  // Handle task creation from AI
   const handleTaskCreated = async (task) => {
     if (!selectedProject) {
       console.error('No project selected');
@@ -230,17 +304,14 @@ export default function Projects() {
     }
 
     try {
-      // ✅ Strip out any client-generated IDs (MongoDB can't accept string IDs)
-      const { _id, id, task_id, __v, ...cleanTask } = task;
-      
       const taskData = {
-        ...cleanTask,
+        ...task,
         project_id: selectedProject.id,
         status: task.status || 'todo',
         source: task.source || 'manual',
       };
       
-      console.log('Creating task with cleaned data:', taskData);
+      console.log('📤 Creating task with AI:', taskData);
       
       const created = await createTask(taskData);
       if (created) {
@@ -251,13 +322,141 @@ export default function Projects() {
     }
   };
 
+  // Handle manual task creation
+  const handleManualTaskCreate = async () => {
+    if (!manualTaskTitle.trim() || !selectedProject) {
+      console.error('No task title or project selected');
+      return;
+    }
+
+    setIsManualCreating(true);
+    try {
+      const taskData = {
+        title: manualTaskTitle.trim(),
+        description: manualTaskDescription.trim(),
+        priority: manualTaskPriority || 'medium',
+        due_date: manualTaskDueDate || null,
+        assignee_id: manualTaskAssignee || null,
+        assignee_name: manualTaskAssignee ? teamMembers.find(m => m.id === manualTaskAssignee)?.name || null : null,
+        project_id: selectedProject.id,
+        status: 'todo',
+        source: 'manual',
+        tags: [],
+      };
+      
+      console.log('📤 Creating manual task:', taskData);
+      
+      const created = await createTask(taskData);
+      if (created) {
+        // Reset form
+        setManualTaskTitle('');
+        setManualTaskDescription('');
+        setManualTaskPriority('medium');
+        setManualTaskDueDate('');
+        setManualTaskAssignee('');
+        setShowAddTask(false);
+      }
+    } catch (error) {
+      console.error('Failed to create manual task:', error);
+    } finally {
+      setIsManualCreating(false);
+    }
+  };
+
   const getTaskKey = (task, index) => {
     return task.id || task._id || task.task_id || `task-${index}`;
+  };
+
+  const getTaskId = (task) => {
+    return task.id || task._id || task.task_id;
   };
 
   const isLoading = loading || tasksLoading;
 
   const stats = selectedProject ? getTaskStats(selectedProject.id) : null;
+
+  // Task Assignment Modal
+  const AssignModal = () => {
+    if (!selectedTaskForAssign) return null;
+    
+    const currentAssignee = selectedTaskForAssign.assignee_id;
+    
+    return (
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div className="glass rounded-xl max-w-md w-full p-6 border border-border animate-fade-in">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
+              <Users className="w-5 h-5 text-primary" />
+              Assign Task
+            </h2>
+            <button
+              onClick={() => {
+                setShowAssignModal(false);
+                setSelectedTaskForAssign(null);
+              }}
+              className="p-1 hover:bg-secondary/60 rounded-lg transition-colors"
+            >
+              <X className="w-5 h-5 text-foreground" />
+            </button>
+          </div>
+          
+          <p className="text-sm text-muted-foreground mb-4">
+            Assign "{selectedTaskForAssign.title}" to a team member
+          </p>
+          
+          <div className="space-y-2">
+            {teamMembers.map(member => {
+              const isAssigned = currentAssignee === member.id;
+              const taskCount = getTasksForMember(member.id).length;
+              
+              return (
+                <button
+                  key={member.id}
+                  onClick={() => assignTaskToMember(getTaskId(selectedTaskForAssign), member.id)}
+                  className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-all ${
+                    isAssigned 
+                      ? 'border-primary/50 bg-primary/10' 
+                      : 'border-border hover:border-primary/30 hover:bg-secondary/30'
+                  }`}
+                >
+                  <img 
+                    src={member.avatar} 
+                    alt={member.name} 
+                    className="w-10 h-10 rounded-full object-cover"
+                  />
+                  <div className="flex-1 text-left">
+                    <p className="text-sm font-medium text-foreground">{member.name}</p>
+                    <p className="text-xs text-muted-foreground">{member.email}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">{taskCount} tasks</span>
+                    {isAssigned && (
+                      <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                        <Check className="w-3 h-3 text-primary-foreground" />
+                      </div>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+          
+          {currentAssignee && (
+            <button
+              onClick={() => {
+                unassignTask(getTaskId(selectedTaskForAssign));
+                setShowAssignModal(false);
+                setSelectedTaskForAssign(null);
+              }}
+              className="mt-4 w-full text-center text-sm text-red-500 hover:text-red-400 transition-colors"
+            >
+              Remove assignment
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="flex h-full overflow-hidden">
@@ -366,6 +565,27 @@ export default function Projects() {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              {/* Team Members Display */}
+              <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-secondary/30 border border-border">
+                <Users className="w-3.5 h-3.5 text-muted-foreground" />
+                <div className="flex -space-x-1.5">
+                  {teamMembers.slice(0, 3).map(member => (
+                    <img
+                      key={member.id}
+                      src={member.avatar}
+                      alt={member.name}
+                      className="w-6 h-6 rounded-full border-2 border-background"
+                      title={member.name}
+                    />
+                  ))}
+                  {teamMembers.length > 3 && (
+                    <div className="w-6 h-6 rounded-full bg-secondary border-2 border-background flex items-center justify-center text-[8px] font-bold text-muted-foreground">
+                      +{teamMembers.length - 3}
+                    </div>
+                  )}
+                </div>
+              </div>
+              
               <select
                 value={selectedProject.status || 'active'}
                 onChange={(e) => updateProjectStatus(selectedProject.id, e.target.value)}
@@ -408,6 +628,22 @@ export default function Projects() {
                 className="w-full bg-secondary/60 border border-border rounded-lg px-3 py-1.5 text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary/50"
               />
             </div>
+            
+            {/* ✅ Assignee Filter */}
+            <select
+              value={assigneeFilter}
+              onChange={(e) => setAssigneeFilter(e.target.value)}
+              className="bg-secondary/60 border border-border rounded-lg px-2 py-1.5 text-xs text-foreground focus:outline-none focus:border-primary/50"
+            >
+              <option value="all">All Members</option>
+              <option value="unassigned">Unassigned</option>
+              {teamMembers.map(member => (
+                <option key={member.id} value={member.id}>
+                  {member.name}
+                </option>
+              ))}
+            </select>
+            
             <button
               onClick={() => setShowFilters(!showFilters)}
               className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-all
@@ -439,11 +675,106 @@ export default function Projects() {
             )}
           </div>
 
+          {/* Add Task Section - Both AI and Manual */}
           {showAddTask && (
-            <div className="px-6 py-4 border-b border-border bg-card/20 animate-fade-in">
-              <NLPTaskInput
-                onTaskCreated={handleTaskCreated}
-              />
+            <div className="px-6 py-4 border-b border-border bg-card/20 animate-fade-in space-y-4">
+              {/* AI Input */}
+              <div>
+                <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
+                  <Sparkles className="w-3 h-3 text-cyan" />
+                  AI Task Creation
+                </p>
+                <NLPTaskInput
+                  onTaskCreated={handleTaskCreated}
+                  projectId={selectedProject.id}
+                  onClose={() => setShowAddTask(false)}
+                />
+              </div>
+              
+              {/* Manual Task Form */}
+              <div className="pt-4 border-t border-border">
+                <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
+                  <Plus className="w-3 h-3" />
+                  Manual Task Creation
+                </p>
+                <div className="space-y-3">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Task title *"
+                      value={manualTaskTitle}
+                      onChange={(e) => setManualTaskTitle(e.target.value)}
+                      className="flex-1 bg-secondary/60 border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary/50"
+                    />
+                    <select
+                      value={manualTaskPriority}
+                      onChange={(e) => setManualTaskPriority(e.target.value)}
+                      className="bg-secondary/60 border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary/50"
+                    >
+                      <option value="low">Low</option>
+                      <option value="medium">Medium</option>
+                      <option value="high">High</option>
+                      <option value="urgent">Urgent</option>
+                    </select>
+                  </div>
+                  
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Description (optional)"
+                      value={manualTaskDescription}
+                      onChange={(e) => setManualTaskDescription(e.target.value)}
+                      className="flex-1 bg-secondary/60 border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary/50"
+                    />
+                    <input
+                      type="datetime-local"
+                      value={manualTaskDueDate}
+                      onChange={(e) => setManualTaskDueDate(e.target.value)}
+                      className="bg-secondary/60 border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary/50"
+                    />
+                  </div>
+                  
+                  <div className="flex gap-2">
+                    <select
+                      value={manualTaskAssignee}
+                      onChange={(e) => setManualTaskAssignee(e.target.value)}
+                      className="flex-1 bg-secondary/60 border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary/50"
+                    >
+                      <option value="">Unassigned</option>
+                      {teamMembers.map(member => (
+                        <option key={member.id} value={member.id}>
+                          {member.name}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      onClick={handleManualTaskCreate}
+                      disabled={isManualCreating || !manualTaskTitle.trim()}
+                      className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-semibold hover:bg-primary/90 disabled:opacity-50 transition-colors"
+                    >
+                      {isManualCreating ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Send className="w-4 h-4" />
+                      )}
+                      Add Task
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowAddTask(false);
+                        setManualTaskTitle('');
+                        setManualTaskDescription('');
+                        setManualTaskPriority('medium');
+                        setManualTaskDueDate('');
+                        setManualTaskAssignee('');
+                      }}
+                      className="px-3 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 
@@ -455,19 +786,53 @@ export default function Projects() {
             ) : getFilteredAndSortedTasks(selectedProject.id).length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20 text-center">
                 <CheckSquare className="w-12 h-12 text-muted-foreground/30 mb-3" />
-                <p className="text-muted-foreground font-medium">No tasks match your filters</p>
-                <p className="text-muted-foreground/60 text-sm mt-1">Try adjusting your filters or add a new task</p>
+                <p className="text-muted-foreground font-medium">No tasks in this project</p>
+                <p className="text-muted-foreground/60 text-sm mt-1">Click "Add Task" to create your first task</p>
               </div>
             ) : (
               <div className="space-y-2">
                 {getFilteredAndSortedTasks(selectedProject.id).map((task, index) => {
                   const key = getTaskKey(task, index);
+                  const taskId = getTaskId(task);
+                  const assignee = teamMembers.find(m => m.id === task.assignee_id);
+                  
                   return (
-                    <TaskCard
-                      key={key}
-                      task={task}
-                      onUpdate={handleTaskUpdate}
-                    />
+                    <div key={key} className="relative group">
+                      <TaskCard
+                        task={task}
+                        onUpdate={(id, updated) => handleTaskUpdate(id || taskId, updated)}
+                      />
+                      {/* Assignment button - always visible on the right */}
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                        {assignee ? (
+                          <button
+                            onClick={() => {
+                              setSelectedTaskForAssign(task);
+                              setShowAssignModal(true);
+                            }}
+                            className="flex items-center gap-1 px-2 py-1 rounded-lg bg-primary/10 border border-primary/20 text-xs text-primary hover:bg-primary/20 transition-colors"
+                          >
+                            <img 
+                              src={assignee.avatar} 
+                              alt={assignee.name} 
+                              className="w-5 h-5 rounded-full"
+                            />
+                            <span className="hidden sm:inline">{assignee.name.split(' ')[0]}</span>
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => {
+                              setSelectedTaskForAssign(task);
+                              setShowAssignModal(true);
+                            }}
+                            className="flex items-center gap-1 px-2 py-1 rounded-lg bg-secondary/60 border border-border text-xs text-muted-foreground hover:text-foreground hover:border-primary/30 transition-colors"
+                          >
+                            <UserPlus className="w-3 h-3" />
+                            <span className="hidden sm:inline">Assign</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
                   );
                 })}
               </div>
@@ -485,6 +850,9 @@ export default function Projects() {
           </div>
         </div>
       )}
+
+      {/* Assignment Modal */}
+      {showAssignModal && <AssignModal />}
     </div>
   );
 }

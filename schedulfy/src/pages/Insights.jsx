@@ -3,12 +3,43 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/AuthContext';
 import { schedulfySDK } from '@/lib/sdk';
 import { Target, Zap, Clock, BarChart2 } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { format, subDays, isWithinInterval, startOfDay, endOfDay, getDay } from 'date-fns';
+
+// Import chart components from recharts
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  PieChart,
+  Pie,
+  Cell
+} from 'recharts';
+
+// Import InsightChat component
 import InsightChat from '@/components/InsightChat';
 
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const COLORS = ['hsl(248 100% 70%)', 'hsl(191 100% 50%)', 'hsl(160 60% 45%)', 'hsl(43 74% 66%)', 'hsl(0 84% 60%)'];
+
+// Custom Tooltip Component
+const CustomTooltip = ({ active, payload, label }) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-card border border-border rounded-lg px-3 py-2 text-xs">
+        <p className="font-medium text-foreground">{label}</p>
+        {payload.map(p => (
+          <p key={p.name} style={{ color: p.color || p.fill }}>
+            {p.name}: {p.value}
+          </p>
+        ))}
+      </div>
+    );
+  }
+  return null;
+};
 
 export default function Insights() {
   const { isAuthenticated, isLoadingAuth } = useAuth();
@@ -33,15 +64,15 @@ export default function Insights() {
       
       // Get current user
       const user = await schedulfySDK.auth.me();
-      console.log('✅ User loaded:', user);
+      console.log('User loaded:', user);
       
       // Fetch real tasks from backend
       let tasksData = [];
       try {
         tasksData = await schedulfySDK.tasks.getAll();
-        console.log(`✅ Loaded ${tasksData.length} tasks from backend`);
+        console.log(` Loaded ${tasksData.length} tasks from backend`);
       } catch (taskError) {
-        console.error('❌ Failed to fetch tasks:', taskError);
+        console.error('Failed to fetch tasks:', taskError);
         setError('Failed to load tasks. Please refresh.');
       }
       
@@ -49,16 +80,16 @@ export default function Insights() {
       let sessionsData = [];
       try {
         sessionsData = await schedulfySDK.events.getAll();
-        console.log(`✅ Loaded ${sessionsData.length} sessions from backend`);
+        console.log(`Loaded ${sessionsData.length} sessions from backend`);
       } catch (sessionError) {
-        console.error('❌ Failed to fetch sessions:', sessionError);
+        console.error('Failed to fetch sessions:', sessionError);
         // Don't set error for sessions, just show empty
       }
       
       setTasks(tasksData || []);
       setFocusSessions(sessionsData || []);
     } catch (error) {
-      console.error('❌ Error loading data:', error);
+      console.error('Error loading data:', error);
       setError('Failed to load data. Please refresh and try again.');
     } finally {
       setLoading(false);
@@ -94,18 +125,6 @@ export default function Insights() {
 
   const completionRate = tasks.length > 0 ? Math.round((tasks.filter(t => t.status === 'done').length / tasks.length) * 100) : 0;
   const totalFocusHours = sessions.length > 0 ? Math.round(sessions.reduce((a, s) => a + (s.duration_minutes || 25), 0) / 60 * 10) / 10 : 0;
-
-  const CustomTooltip = ({ active, payload, label }) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-card border border-border rounded-lg px-3 py-2 text-xs">
-          <p className="font-medium text-foreground">{label}</p>
-          {payload.map(p => <p key={p.name} style={{ color: p.color }}>{p.name}: {p.value}</p>)}
-        </div>
-      );
-    }
-    return null;
-  };
 
   if (isLoadingAuth || loading) {
     return (
@@ -154,7 +173,7 @@ export default function Insights() {
       <div>
         <h1 className="font-heading text-3xl font-bold tracking-wide">SCHEDULFY INSIGHTS</h1>
         <p className="text-muted-foreground text-sm mt-1">
-          {tasks.length > 0 ? `📊 ${tasks.length} tasks • ${sessions.length} focus sessions` : 'Start adding tasks to see insights!'}
+          {tasks.length > 0 ? ` ${tasks.length} tasks • ${sessions.length} focus sessions` : 'Start adding tasks to see insights!'}
         </p>
       </div>
 
