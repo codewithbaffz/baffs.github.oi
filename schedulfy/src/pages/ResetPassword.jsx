@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { Lock, Loader2, AlertTriangle } from "lucide-react";
 import AuthLayout from "@/components/AuthLayout";
-import schedulfy from "@/lib/schedulfy";
+import { schedulfy } from "@/api/schedulfyClient";
 
 export default function ResetPassword() {
   const [searchParams] = useSearchParams();
