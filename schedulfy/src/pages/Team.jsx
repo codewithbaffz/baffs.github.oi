@@ -89,8 +89,8 @@ export default function Team() {
           }
         }
       }
-    } catch (error) {
-      console.error('Error fetching workspaces:', error);
+    } catch (_error) {
+      console.error('Error fetching workspaces:', _error);
     } finally {
       setLoading(false);
     }
@@ -465,7 +465,7 @@ export default function Team() {
                   </div>
                 )}
                 {isPending && (
-                  <p className="text-xs text-yellow-400/70 mt-2">⏳ Awaiting acceptance</p>
+                  <p className="text-xs text-yellow-400/70 mt-2"> Awaiting acceptance</p>
                 )}
               </div>
             );
