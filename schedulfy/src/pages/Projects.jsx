@@ -1,3 +1,4 @@
+// Projects.jsx
 import { useState, useEffect } from 'react';
 import { isPast } from 'date-fns';
 import { useTasks } from '@/context/TaskContext';
@@ -9,6 +10,7 @@ import {
 } from 'lucide-react';
 import TaskCard from '@/components/TaskCard';
 import NLPTaskInput from '@/components/NLPTaskInput';
+import schedulfySDK from '@/lib/sdk';
 
 const STATUS_COLOR = {
   active: 'text-green-400 bg-green-400/10 border-green-400/20',
@@ -53,7 +55,7 @@ export default function Projects() {
   const [form, setForm] = useState({ name: '', description: '', color: '#6C63FF', due_date: '' });
   const [saving, setSaving] = useState(false);
   
-  // ✅ Manual task creation state
+  // Manual task creation state
   const [manualTaskTitle, setManualTaskTitle] = useState('');
   const [manualTaskDescription, setManualTaskDescription] = useState('');
   const [manualTaskPriority, setManualTaskPriority] = useState('medium');
@@ -67,51 +69,107 @@ export default function Projects() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   
-  // ✅ NEW: Filter by assignee
+  // Filter by assignee
   const [assigneeFilter, setAssigneeFilter] = useState('all');
 
-  // Load projects from backend if available
+  // ✅ Load projects from backend using your SDK
   useEffect(() => {
     loadProjects();
   }, []);
 
+  // ✅ UPDATED: Real API call for fetching projects
   const loadProjects = async () => {
     setLoading(true);
     try {
-      const { base44 } = await import('@/api/base44Client');
-      const user = await base44.auth.me();
-      const data = await base44.entities.Project.filter({ user_id: user.id }, '-created_date', 50);
-      if (data && data.length > 0) {
-        setProjects(data);
+      console.log('📋 Fetching projects from backend...');
+      
+      // Get the auth token
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        console.log('No auth token found - using demo data');
+        setLoading(false);
+        return;
       }
-    } catch {
-      console.log('Projects backend not available - using demo data');
+
+      // ✅ Use your SDK or direct fetch
+      // Option 1: Using fetch directly
+      const response = await fetch('/api/projects', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Projects fetched:', data);
+        
+        // Check if data is an array, if not, try to extract it
+        const projectsData = Array.isArray(data) ? data : data.projects || data.data || [];
+        if (projectsData.length > 0) {
+          setProjects(projectsData);
+        } else {
+          console.log('No projects from backend - using demo data');
+        }
+      } else {
+        console.log('Backend response not OK - using demo data');
+      }
+    } catch (error) {
+      console.error('❌ Failed to fetch projects:', error);
+      console.log('Using demo data as fallback');
     } finally {
       setLoading(false);
     }
   };
 
+  // ✅ UPDATED: Create project with real API
   const createProject = async () => {
     if (!form.name.trim()) return;
     setSaving(true);
     
     try {
-      const { base44 } = await import('@/api/base44Client');
-      const user = await base44.auth.me();
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        throw new Error('No auth token');
+      }
+
       const newProject = {
         name: form.name,
         description: form.description,
         color: form.color,
         due_date: form.due_date ? new Date(form.due_date).toISOString() : null,
         status: 'active',
-        user_id: user.id,
       };
-      const created = await base44.entities.Project.create(newProject);
-      setProjects(prev => [created, ...prev]);
-      setSelectedProject(created);
-    } catch {
+
+      const response = await fetch('/api/projects', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newProject),
+      });
+
+      if (response.ok) {
+        const created = await response.json();
+        console.log('✅ Project created:', created);
+        setProjects(prev => [created, ...prev]);
+        setSelectedProject(created);
+      } else {
+        // Fallback: save locally
+        console.log('Backend creation failed - saving locally');
+        const localProject = {
+          id: Date.now().toString(),
+          ...newProject,
+          created_at: new Date().toISOString(),
+        };
+        setProjects(prev => [localProject, ...prev]);
+        setSelectedProject(localProject);
+      }
+    } catch (error) {
+      console.error('❌ Failed to create project:', error);
       // Fallback: save locally
-      const newProject = {
+      const localProject = {
         id: Date.now().toString(),
         name: form.name,
         description: form.description,
@@ -120,8 +178,8 @@ export default function Projects() {
         status: 'active',
         created_at: new Date().toISOString(),
       };
-      setProjects(prev => [newProject, ...prev]);
-      setSelectedProject(newProject);
+      setProjects(prev => [localProject, ...prev]);
+      setSelectedProject(localProject);
     }
     
     setForm({ name: '', description: '', color: '#6C63FF', due_date: '' });
@@ -129,14 +187,25 @@ export default function Projects() {
     setSaving(false);
   };
 
+  // ✅ UPDATED: Delete project with real API
   const deleteProject = async (id) => {
     if (!window.confirm('Delete this project and all its tasks?')) return;
     
     try {
-      const { base44 } = await import('@/api/base44Client');
-      await base44.entities.Project.delete(id);
-    } catch {
-      console.log('Failed to delete project from backend');
+      const token = localStorage.getItem('authToken');
+      if (token) {
+        const response = await fetch(`/api/projects/${id}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+        if (response.ok) {
+          console.log('✅ Project deleted from backend');
+        }
+      }
+    } catch (error) {
+      console.error('Failed to delete project from backend:', error);
     }
     
     setProjects(prev => prev.filter(p => p.id !== id));
@@ -148,20 +217,37 @@ export default function Projects() {
     if (selectedProject?.id === id) setSelectedProject(null);
   };
 
+  // ✅ UPDATED: Update project status with real API
   const updateProjectStatus = async (projectId, newStatus) => {
     try {
-      const { base44 } = await import('@/api/base44Client');
-      await base44.entities.Project.update(projectId, { status: newStatus });
-      setProjects(prev => prev.map(p => p.id === projectId ? { ...p, status: newStatus } : p));
-      if (selectedProject?.id === projectId) {
-        setSelectedProject(prev => ({ ...prev, status: newStatus }));
+      const token = localStorage.getItem('authToken');
+      if (token) {
+        const response = await fetch(`/api/projects/${projectId}`, {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ status: newStatus }),
+        });
+        
+        if (response.ok) {
+          console.log('✅ Project status updated:', newStatus);
+          setProjects(prev => prev.map(p => p.id === projectId ? { ...p, status: newStatus } : p));
+          if (selectedProject?.id === projectId) {
+            setSelectedProject(prev => ({ ...prev, status: newStatus }));
+          }
+          return;
+        }
       }
-    } catch {
-      // Fallback: update locally
-      setProjects(prev => prev.map(p => p.id === projectId ? { ...p, status: newStatus } : p));
-      if (selectedProject?.id === projectId) {
-        setSelectedProject(prev => ({ ...prev, status: newStatus }));
-      }
+    } catch (error) {
+      console.error('Failed to update project status:', error);
+    }
+    
+    // Fallback: update locally
+    setProjects(prev => prev.map(p => p.id === projectId ? { ...p, status: newStatus } : p));
+    if (selectedProject?.id === projectId) {
+      setSelectedProject(prev => ({ ...prev, status: newStatus }));
     }
   };
 
@@ -208,7 +294,7 @@ export default function Projects() {
     return tasks.filter(t => t.project_id === projectId);
   };
 
-  // ✅ Get assigned tasks for a specific member
+  // Get assigned tasks for a specific member
   const getTasksForMember = (memberId) => {
     return tasks.filter(t => t.assignee_id === memberId);
   };
@@ -217,9 +303,13 @@ export default function Projects() {
   const getFilteredAndSortedTasks = (projectId) => {
     let filtered = getProjectTasks(projectId);
     
-    // ✅ Filter by assignee
+    // Filter by assignee
     if (assigneeFilter !== 'all') {
-      filtered = filtered.filter(t => t.assignee_id === assigneeFilter);
+      if (assigneeFilter === 'unassigned') {
+        filtered = filtered.filter(t => !t.assignee_id);
+      } else {
+        filtered = filtered.filter(t => t.assignee_id === assigneeFilter);
+      }
     }
     
     // Filter by view
@@ -629,7 +719,7 @@ export default function Projects() {
               />
             </div>
             
-            {/* ✅ Assignee Filter */}
+            {/* Assignee Filter */}
             <select
               value={assigneeFilter}
               onChange={(e) => setAssigneeFilter(e.target.value)}

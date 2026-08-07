@@ -1,9 +1,10 @@
 // pages/Register.jsx
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/AuthContext";
-import { Mail, Lock, Loader2, UserPlus } from "lucide-react";
+import { Mail, Lock, Loader2, UserPlus, User } from "lucide-react"; // ✅ Added User icon
 import AuthLayout from "@/components/AuthLayout";
+import schedulfySDK from "@/lib/sdk";
 
 // Google Icon Component
 const GoogleIcon = ({ className }) => (
@@ -15,28 +16,73 @@ const GoogleIcon = ({ className }) => (
   </svg>
 );
 
-// OTP Input Components (simplified to match inspo)
-const InputOTP = ({ children, ...props }) => (
-  <div className="flex gap-2" {...props}>
-    {children}
-  </div>
+// OTP Input with proper state handling
+const InputOTPSlot = ({ index, value, onChange, onKeyDown }) => (
+  <input
+    type="text"
+    maxLength={1}
+    data-index={index}
+    value={value || ''}
+    onChange={(e) => onChange(index, e.target.value)}
+    onKeyDown={(e) => onKeyDown(index, e)}
+    className="w-12 h-14 text-center text-xl font-bold border border-border rounded-xl bg-card focus:bg-white/90 text-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition-all"
+  />
 );
 
 const InputOTPGroup = ({ children }) => (
   <div className="flex gap-2">{children}</div>
 );
 
-const InputOTPSlot = ({ index, ...props }) => (
-  <input
-    type="text"
-    maxLength={1}
-    data-index={index}
-    className="w-12 h-14 text-center text-xl font-bold border border-border rounded-xl bg-card focus:bg-white/90 text-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition-all"
-    {...props}
-  />
-);
+const InputOTP = ({ value, onChange }) => {
+  const [otpValues, setOtpValues] = useState(['', '', '', '', '', '']);
+  const inputRefs = useRef([]);
+
+  const handleChange = (index, val) => {
+    if (val.length > 1) return;
+    
+    const newOtp = [...otpValues];
+    newOtp[index] = val;
+    setOtpValues(newOtp);
+    onChange(newOtp.join(''));
+
+    if (val && index < 5) {
+      inputRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleKeyDown = (index, e) => {
+    if (e.key === 'Backspace' && !otpValues[index] && index > 0) {
+      inputRefs.current[index - 1]?.focus();
+    }
+  };
+
+  React.useEffect(() => {
+    if (value && value.length === 6) {
+      const newOtp = value.split('');
+      setOtpValues(newOtp);
+    }
+  }, [value]);
+
+  return (
+    <div className="flex justify-center gap-2 mb-6">
+      <InputOTPGroup>
+        {otpValues.map((val, index) => (
+          <InputOTPSlot
+            key={index}
+            index={index}
+            value={val}
+            onChange={handleChange}
+            onKeyDown={handleKeyDown}
+            ref={(el) => (inputRefs.current[index] = el)}
+          />
+        ))}
+      </InputOTPGroup>
+    </div>
+  );
+};
 
 export default function Register() {
+  const [name, setName] = useState(""); // ✅ Added name
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -50,22 +96,48 @@ export default function Register() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+    
+    // ✅ Validate name
+    if (!name.trim()) {
+      setError("Full name is required");
+      return;
+    }
+
     if (password !== confirmPassword) {
       setError("Passwords do not match");
       return;
     }
+
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters");
+      return;
+    }
+
     setLoading(true);
     try {
-      const response = await schedulfy.auth.register({ email, password });
+      console.log('Registering user:', { name, email });
+      
+      // ✅ Send name, email, and password
+      const response = await schedulfySDK.auth.register({ 
+        name: name.trim(),
+        email, 
+        password 
+      });
+      console.log('Registration response:', response);
+      
       if (response.token) {
         localStorage.setItem('authToken', response.token);
         await checkUserAuth();
         navigate("/");
+      } else if (response.requiresVerification || response.message?.includes('verify')) {
+        setShowOtp(true);
       } else {
         setShowOtp(true);
       }
     } catch (err) {
-      if (err.message?.includes('verify') || err.message?.includes('otp')) {
+      console.error('Registration error:', err);
+      if (err.message?.toLowerCase().includes('verify') || 
+          err.message?.toLowerCase().includes('otp')) {
         setShowOtp(true);
         setError("");
       } else {
@@ -80,13 +152,19 @@ export default function Register() {
     setError("");
     setLoading(true);
     try {
-      const result = await schedulfy.auth.verifyOtp({ email, otpCode });
+      console.log('Verifying OTP:', { email, otpCode });
+      const result = await schedulfySDK.auth.verifyOtp({ email, otpCode });
+      console.log('Verification response:', result);
+      
       if (result?.access_token || result?.token) {
         localStorage.setItem('authToken', result.token || result.access_token);
         await checkUserAuth();
         navigate("/");
+      } else {
+        setError("Verification successful but no token received");
       }
     } catch (err) {
+      console.error('Verification error:', err);
       setError(err.message || "Invalid verification code");
     } finally {
       setLoading(false);
@@ -96,9 +174,10 @@ export default function Register() {
   const handleResend = async () => {
     setError("");
     try {
-      await schedulfy.auth.resendOtp(email);
+      await schedulfySDK.auth.resendOtp(email);
       alert("Code sent! Check your email.");
     } catch (err) {
+      console.error('Resend error:', err);
       setError(err.message || "Failed to resend code");
     }
   };
@@ -107,15 +186,11 @@ export default function Register() {
     setError("");
     setLoading(true);
     try {
-      const response = await schedulfy.auth.loginWithGoogle();
-      if (response.token) {
-        localStorage.setItem('authToken', response.token);
-        await checkUserAuth();
-        navigate("/");
-      }
+      const apiBase = import.meta.env.VITE_API_URL || '/api';
+      window.location.href = `${apiBase}/auth/google`;
     } catch (err) {
+      console.error('Google login error:', err);
       setError(err.message || 'Unable to continue with Google');
-    } finally {
       setLoading(false);
     }
   };
@@ -133,18 +208,7 @@ export default function Register() {
             {error}
           </div>
         )}
-        <div className="flex justify-center mb-6">
-          <InputOTP maxLength={6} value={otpCode} onChange={setOtpCode}>
-            <InputOTPGroup>
-              <InputOTPSlot index={0} />
-              <InputOTPSlot index={1} />
-              <InputOTPSlot index={2} />
-              <InputOTPSlot index={3} />
-              <InputOTPSlot index={4} />
-              <InputOTPSlot index={5} />
-            </InputOTPGroup>
-          </InputOTP>
-        </div>
+        <InputOTP value={otpCode} onChange={setOtpCode} />
         <button
           className="w-full h-12 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-semibold transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
           onClick={handleVerify}
@@ -206,6 +270,23 @@ export default function Register() {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
+        {/* ✅ Name Field - Added */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-foreground">Full Name</label>
+          <div className="relative">
+            <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <input
+              type="text"
+              autoComplete="name"
+              placeholder="John Doe"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="pl-10 h-12 w-full border border-border bg-card rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition-all"
+              required
+            />
+          </div>
+        </div>
+
         <div className="space-y-2">
           <label className="text-sm font-medium text-foreground">Email</label>
           <div className="relative">
@@ -235,6 +316,7 @@ export default function Register() {
               onChange={(e) => setPassword(e.target.value)}
               className="pl-10 h-12 w-full border border-border bg-card rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition-all"
               required
+              minLength={8}
             />
           </div>
         </div>
@@ -251,6 +333,7 @@ export default function Register() {
               onChange={(e) => setConfirmPassword(e.target.value)}
               className="pl-10 h-12 w-full border border-border bg-card rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition-all"
               required
+              minLength={8}
             />
           </div>
         </div>

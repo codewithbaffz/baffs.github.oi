@@ -1,7 +1,8 @@
 // src/lib/sdk.js
 
 // Base API configuration
-const API_BASE = import.meta.env.VITE_API_URL || '/api';
+const API_BASE = import.meta.env.VITE_API_URL || '/https://localhost:5000/api';
+console.log('API_BASE=', API_BASE);
 
 // Helper function for API calls
 async function apiCall(endpoint, options = {}) {

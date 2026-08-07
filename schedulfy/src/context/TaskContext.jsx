@@ -11,9 +11,27 @@ export const TaskProvider = ({ children }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Helper function to get task ID
+  // Helper function to get task ID (handles both _id and id)
   const getTaskId = (task) => {
-    return task?.id || task?._id || task?.task_id || null;
+    if (!task) return null;
+    // Return _id if it exists (MongoDB), otherwise fallback to id
+    return task._id || task.id || null;
+  };
+
+  // Normalize task to have both _id and id for compatibility
+  const normalizeTask = (task) => {
+    if (!task) return task;
+    return {
+      ...task,
+      id: task._id || task.id, // Ensure id is always set
+      _id: task._id || task.id, // Ensure _id is always set
+    };
+  };
+
+  // Normalize an array of tasks
+  const normalizeTasks = (tasksArray) => {
+    if (!Array.isArray(tasksArray)) return [];
+    return tasksArray.map(normalizeTask);
   };
 
   const fetchTasks = useCallback(async () => {
@@ -27,8 +45,12 @@ export const TaskProvider = ({ children }) => {
       setError(null);
       
       const data = await schedulfySDK.tasks.getAll();
-      console.log('📋 Fetched tasks:', data);
-      setTasks(data || []);
+      console.log('📦 Fetched tasks from API:', data);
+      
+      // Normalize all tasks to have both _id and id
+      const normalizedTasks = normalizeTasks(data);
+      setTasks(normalizedTasks);
+      console.log('✅ Normalized tasks:', normalizedTasks);
     } catch (err) {
       console.error('Error loading tasks:', err);
       setError(err.message || 'Failed to load tasks');
@@ -45,9 +67,13 @@ export const TaskProvider = ({ children }) => {
     try {
       setLoading(true);
       const newTask = await schedulfySDK.tasks.create(taskData);
-      console.log('✅ Created task:', newTask);
-      setTasks(prev => [...prev, newTask]);
-      return { success: true, data: newTask };
+      console.log('✨ Created task:', newTask);
+      
+      // Normalize the new task
+      const normalizedTask = normalizeTask(newTask);
+      setTasks(prev => [normalizedTask, ...prev]);
+      
+      return { success: true, data: normalizedTask };
     } catch (err) {
       console.error('Error creating task:', err);
       setError(err.message || 'Failed to create task');
@@ -61,24 +87,43 @@ export const TaskProvider = ({ children }) => {
     try {
       setLoading(true);
       
-      console.log('📤 updateTask - ID received:', taskId);
-      console.log('📤 updateTask - Updates:', updates);
+      console.log('🔧 updateTask - ID received:', taskId);
+      console.log('🔧 updateTask - Updates:', updates);
       
       if (!taskId) {
         console.error('❌ No task ID provided');
         return { success: false, error: 'No task ID provided' };
       }
       
-      const updatedTask = await schedulfySDK.tasks.update(taskId, updates);
+      // Find the task in local state
+      const existingTask = tasks.find(t => 
+        String(t._id) === String(taskId) || 
+        String(t.id) === String(taskId)
+      );
+      
+      if (!existingTask) {
+        console.error('❌ Task not found in local state:', taskId);
+        console.log('Available tasks:', tasks.map(t => ({ _id: t._id, id: t.id, title: t.title })));
+        return { success: false, error: 'Task not found' };
+      }
+      
+      // Use the _id for the API call (MongoDB)
+      const idToUse = existingTask._id || taskId;
+      console.log('📤 Using _id for update:', idToUse);
+      
+      const updatedTask = await schedulfySDK.tasks.update(idToUse, updates);
       console.log('✅ Updated task received:', updatedTask);
       
-      // ✅ FIX: Check BOTH id AND _id fields
+      // Normalize the updated task
+      const normalizedTask = normalizeTask(updatedTask);
+      
+      // Update state
       setTasks(prev => {
         const newTasks = prev.map(task => {
-          const currentId = getTaskId(task);
-          if (String(currentId) === String(taskId)) {
-            console.log('✅ Updating task in state:', taskId);
-            return updatedTask;
+          // Check both _id and id
+          if (String(task._id) === String(taskId) || String(task.id) === String(taskId)) {
+            console.log('🔄 Updating task in state:', taskId);
+            return normalizedTask;
           }
           return task;
         });
@@ -86,7 +131,7 @@ export const TaskProvider = ({ children }) => {
         return newTasks;
       });
       
-      return { success: true, data: updatedTask };
+      return { success: true, data: normalizedTask };
     } catch (err) {
       console.error('❌ Error updating task:', err);
       setError(err.message || 'Failed to update task');
@@ -94,7 +139,7 @@ export const TaskProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [tasks]);
 
   const deleteTask = useCallback(async (taskId) => {
     try {
@@ -105,26 +150,44 @@ export const TaskProvider = ({ children }) => {
         return { success: false, error: 'No task ID provided' };
       }
       
-      await schedulfySDK.tasks.delete(taskId);
+      // Find the task in local state
+      const existingTask = tasks.find(t => 
+        String(t._id) === String(taskId) || 
+        String(t.id) === String(taskId)
+      );
+      
+      if (!existingTask) {
+        console.error('❌ Task not found for deletion:', taskId);
+        return { success: false, error: 'Task not found' };
+      }
+      
+      // Use the _id for the API call
+      const idToUse = existingTask._id || taskId;
+      console.log('🗑️ Deleting task with _id:', idToUse);
+      
+      await schedulfySDK.tasks.delete(idToUse);
       
       setTasks(prev => {
         const newTasks = prev.filter(task => {
-          const currentId = getTaskId(task);
-          return String(currentId) !== String(taskId);
+          const match = String(task._id) !== String(taskId) && String(task.id) !== String(taskId);
+          if (!match) {
+            console.log('🗑️ Removed task:', taskId);
+          }
+          return match;
         });
-        console.log('🗑️ Deleted task, remaining:', newTasks.length);
+        console.log('📊 Remaining tasks:', newTasks.length);
         return newTasks;
       });
       
       return { success: true };
     } catch (err) {
-      console.error('Error deleting task:', err);
+      console.error('❌ Error deleting task:', err);
       setError(err.message || 'Failed to delete task');
       return { success: false, error: err.message };
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [tasks]);
 
   useEffect(() => {
     fetchTasks();

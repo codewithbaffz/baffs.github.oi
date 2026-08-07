@@ -1,6 +1,7 @@
 // src/components/InsightChat.jsx
 import React, { useState } from 'react';
 import { Bot, Send, X, MessageCircle, AlertCircle } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 
 const InsightChat = ({ tasks, sessions, onClose }) => {
   const [isOpen, setIsOpen] = useState(true);
@@ -49,7 +50,7 @@ const InsightChat = ({ tasks, sessions, onClose }) => {
           'Authorization': `Bearer ${apiKey}`
         },
         body: JSON.stringify({
-          model: 'llama3-70b-8192',
+          model: 'openai/gpt-oss-120b',
           messages: [
             {
               role: 'system',
@@ -70,8 +71,8 @@ const InsightChat = ({ tasks, sessions, onClose }) => {
               content: userMessage
             }
           ],
-          temperature: 0.7,
-          max_tokens: 300
+          temperature: 1,
+          max_tokens: 300,
         })
       });
 
@@ -118,11 +119,11 @@ const InsightChat = ({ tasks, sessions, onClose }) => {
       // Fallback responses based on the error
       let fallbackText = '';
       if (error.message.includes('API key')) {
-        fallbackText = '⚠️ API key issue. Please check your Groq API key in the .env file.';
+        fallbackText = ' API key issue. Please check your Groq API key in the .env file.';
       } else if (error.message.includes('Rate limit')) {
-        fallbackText = '⏳ Too many requests. Please wait a moment before trying again.';
+        fallbackText = ' Too many requests. Please wait a moment before trying again.';
       } else {
-        fallbackText = `💡 Based on your data: You have ${getTaskStats().total} tasks with a ${getTaskStats().completionRate}% completion rate. Keep up the great work!`;
+        fallbackText = ` Based on your data: You have ${getTaskStats().total} tasks with a ${getTaskStats().completionRate}% completion rate. Keep up the great work!`;
       }
       
       setMessages(prev => [...prev, { 
@@ -171,7 +172,7 @@ const InsightChat = ({ tasks, sessions, onClose }) => {
                 ? 'bg-primary text-primary-foreground' 
                 : 'bg-secondary/60 text-foreground border border-border'
             }`}>
-              {msg.text}
+              <ReactMarkdown>{msg.text}</ReactMarkdown>
             </div>
           </div>
         ))}
@@ -190,7 +191,7 @@ const InsightChat = ({ tasks, sessions, onClose }) => {
           <div className="flex justify-center">
             <div className="flex items-center gap-2 text-xs text-yellow-500 bg-yellow-500/10 px-3 py-1.5 rounded-lg border border-yellow-500/20">
               <AlertCircle className="w-3 h-3" />
-              {apiError}
+              <ReactMarkdown>{apiError}</ReactMarkdown>
             </div>
           </div>
         )}

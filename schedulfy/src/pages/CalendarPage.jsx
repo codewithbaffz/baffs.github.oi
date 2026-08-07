@@ -14,7 +14,9 @@ import {
   PlusCircle,
   ListTodo,
   Calendar as CalendarIcon,
-  Flag
+  Flag,
+  Trash2,
+  Edit2
 } from 'lucide-react';
 import { 
   format, 
@@ -29,11 +31,13 @@ import {
   addMonths,
   subMonths,
   addWeeks,
-  subWeeks
+  subWeeks,
+  parseISO
 } from 'date-fns';
 import { useEvents } from '@/context/EventContext';
 import { useTasks } from '@/context/TaskContext';
 
+// Color mapping for different event sources
 const SOURCE_COLOR = {
   manual: 'bg-primary/20 border-primary/40 text-primary',
   google: 'bg-green-400/20 border-green-400/40 text-green-400',
@@ -42,27 +46,51 @@ const SOURCE_COLOR = {
   task: 'bg-orange-400/20 border-orange-400/40 text-orange-400',
 };
 
+// Priority options for tasks
 const PRIORITY_OPTIONS = [
-  { value: 'low', label: 'Low', color: 'text-green-400' },
-  { value: 'medium', label: 'Medium', color: 'text-yellow-400' },
-  { value: 'high', label: 'High', color: 'text-orange-400' },
-  { value: 'urgent', label: 'Urgent', color: 'text-red-500' },
+  { value: 'low', label: 'Low', color: 'text-green-400', icon: '🟢' },
+  { value: 'medium', label: 'Medium', color: 'text-yellow-400', icon: '🟡' },
+  { value: 'high', label: 'High', color: 'text-orange-400', icon: '🟠' },
+  { value: 'urgent', label: 'Urgent', color: 'text-red-500', icon: '🔴' },
+];
+
+// Color options for events
+const COLOR_OPTIONS = [
+  '#6C63FF', // Purple
+  '#FF6B6B', // Red
+  '#4ECDC4', // Teal
+  '#45B7D1', // Blue
+  '#FFA07A', // Orange
+  '#98D8C8', // Mint
+  '#DDA0DD', // Plum
+  '#F0E68C', // Khaki
 ];
 
 export default function CalendarPage() {
   const { events, loading: eventsLoading, createEvent, updateEvent, deleteEvent } = useEvents();
-  const { tasks, loading: tasksLoading, createTask } = useTasks();
+  const { tasks, loading: tasksLoading, createTask, updateTask, deleteTask } = useTasks();
+  
+  // State variables
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState('month');
   const [selectedDay, setSelectedDay] = useState(null);
   const [showAddEvent, setShowAddEvent] = useState(false);
   const [showAddTask, setShowAddTask] = useState(false);
+  const [showEventDetails, setShowEventDetails] = useState(null);
+  const [showTaskDetails, setShowTaskDetails] = useState(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  
+  // Form states
   const [form, setForm] = useState({ 
     title: '', 
     start_time: '', 
     end_time: '', 
-    color: '#6C63FF' 
+    color: '#6C63FF',
+    description: '',
+    source: 'manual'
   });
+  
   const [taskForm, setTaskForm] = useState({
     title: '',
     description: '',
@@ -70,12 +98,15 @@ export default function CalendarPage() {
     due_date: '',
     tags: ''
   });
+  
+  // Loading states
   const [saving, setSaving] = useState(false);
   const [savingTask, setSavingTask] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const loading = eventsLoading || tasksLoading;
 
-  // Month view calculations
+  // Calendar calculations
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
   const calStart = startOfWeek(monthStart, { weekStartsOn: 1 });
@@ -90,9 +121,14 @@ export default function CalendarPage() {
   });
   const hours = Array.from({ length: 24 }, (_, i) => i);
 
-  const getEventsForDay = (day) => events.filter(e => isSameDay(new Date(e.start_time || e.start), day));
-  const getTasksForDay = (day) => tasks.filter(t => t.due_date && isSameDay(new Date(t.due_date), day));
+  // Helper functions
+  const getEventsForDay = (day) => 
+    events.filter(e => isSameDay(new Date(e.start_time || e.start), day));
+  
+  const getTasksForDay = (day) => 
+    tasks.filter(t => t.due_date && isSameDay(new Date(t.due_date), day));
 
+  // Navigation handlers
   const handlePrev = () => {
     view === 'month' 
       ? setCurrentDate(subMonths(currentDate, 1)) 
@@ -105,6 +141,7 @@ export default function CalendarPage() {
       : setCurrentDate(addWeeks(currentDate, 1));
   };
 
+  // Event CRUD operations
   const handleAddEvent = async () => {
     if (!form.title || !form.start_time || !form.end_time) return;
     setSaving(true);
@@ -113,21 +150,51 @@ export default function CalendarPage() {
         title: form.title,
         start: new Date(form.start_time).toISOString(),
         end: new Date(form.end_time).toISOString(),
-        source: 'manual',
+        source: form.source || 'manual',
         color: form.color,
+        description: form.description || '',
       };
-      const result = await createEvent(eventData);
+      
+      const result = isEditing && editingId 
+        ? await updateEvent(editingId, eventData)
+        : await createEvent(eventData);
+        
       if (result.success) {
-        setForm({ title: '', start_time: '', end_time: '', color: '#6C63FF' });
+        resetEventForm();
         setShowAddEvent(false);
+        setIsEditing(false);
+        setEditingId(null);
       }
     } catch (error) {
-      console.error('Failed to create event:', error);
+      console.error('Failed to save event:', error);
     }
     setSaving(false);
   };
 
-  // ✅ NEW: Handle task creation from calendar
+  const handleDeleteEvent = async (id) => {
+    if (!confirm('Are you sure you want to delete this event?')) return;
+    setDeleting(true);
+    try {
+      await deleteEvent(id);
+      setShowEventDetails(null);
+    } catch (error) {
+      console.error('Failed to delete event:', error);
+    }
+    setDeleting(false);
+  };
+
+  const resetEventForm = () => {
+    setForm({ 
+      title: '', 
+      start_time: '', 
+      end_time: '', 
+      color: '#6C63FF',
+      description: '',
+      source: 'manual'
+    });
+  };
+
+  // Task CRUD operations
   const handleAddTask = async () => {
     if (!taskForm.title.trim()) return;
     setSavingTask(true);
@@ -141,40 +208,103 @@ export default function CalendarPage() {
         status: 'todo',
         source: 'calendar',
       };
-      const result = await createTask(taskData);
+      
+      const result = isEditing && editingId
+        ? await updateTask(editingId, taskData)
+        : await createTask(taskData);
+        
       if (result.success) {
-        setTaskForm({ title: '', description: '', priority: 'medium', due_date: '', tags: '' });
+        resetTaskForm();
         setShowAddTask(false);
+        setIsEditing(false);
+        setEditingId(null);
         setSelectedDay(null);
       }
     } catch (error) {
-      console.error('Failed to create task:', error);
+      console.error('Failed to save task:', error);
     }
     setSavingTask(false);
   };
 
-  // ✅ NEW: Open task modal for a specific day
-  const openTaskModal = (day) => {
-    setSelectedDay(day);
-    setTaskForm({
-      ...taskForm,
-      due_date: format(day, "yyyy-MM-dd'T'HH:mm")
+  const handleDeleteTask = async (id) => {
+    if (!confirm('Are you sure you want to delete this task?')) return;
+    setDeleting(true);
+    try {
+      await deleteTask(id);
+      setShowTaskDetails(null);
+    } catch (error) {
+      console.error('Failed to delete task:', error);
+    }
+    setDeleting(false);
+  };
+
+  const resetTaskForm = () => {
+    setTaskForm({ 
+      title: '', 
+      description: '', 
+      priority: 'medium', 
+      due_date: '', 
+      tags: '' 
     });
+  };
+
+  // Modal open functions
+  const openTaskModal = (day, task = null) => {
+    setSelectedDay(day);
+    if (task) {
+      // Edit mode
+      setIsEditing(true);
+      setEditingId(task.id || task._id);
+      setTaskForm({
+        title: task.title,
+        description: task.description || '',
+        priority: task.priority || 'medium',
+        due_date: task.due_date ? format(new Date(task.due_date), "yyyy-MM-dd'T'HH:mm") : '',
+        tags: task.tags ? task.tags.join(', ') : ''
+      });
+    } else {
+      // Create mode
+      setIsEditing(false);
+      setEditingId(null);
+      setTaskForm({
+        ...taskForm,
+        due_date: format(day, "yyyy-MM-dd'T'HH:mm")
+      });
+    }
     setShowAddTask(true);
   };
 
-  // ✅ NEW: Open event modal for a specific day
-  const openEventModal = (day) => {
+  const openEventModal = (day, event = null) => {
     setSelectedDay(day);
-    setForm({
-      title: '',
-      start_time: format(day, "yyyy-MM-dd'T'HH:mm"),
-      end_time: format(new Date(day.getTime() + 3600000), "yyyy-MM-dd'T'HH:mm"),
-      color: '#6C63FF'
-    });
+    if (event) {
+      // Edit mode
+      setIsEditing(true);
+      setEditingId(event.id || event._id);
+      setForm({
+        title: event.title,
+        start_time: format(new Date(event.start_time || event.start), "yyyy-MM-dd'T'HH:mm"),
+        end_time: format(new Date(event.end_time || event.end), "yyyy-MM-dd'T'HH:mm"),
+        color: event.color || '#6C63FF',
+        description: event.description || '',
+        source: event.source || 'manual'
+      });
+    } else {
+      // Create mode
+      setIsEditing(false);
+      setEditingId(null);
+      setForm({
+        title: '',
+        start_time: format(day, "yyyy-MM-dd'T'HH:mm"),
+        end_time: format(new Date(day.getTime() + 3600000), "yyyy-MM-dd'T'HH:mm"),
+        color: '#6C63FF',
+        description: '',
+        source: 'manual'
+      });
+    }
     setShowAddEvent(true);
   };
 
+  // Loading state
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -186,7 +316,7 @@ export default function CalendarPage() {
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Toolbar */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-card/50 shrink-0">
+      <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-card/50 shrink-0 flex-wrap gap-2">
         <div className="flex items-center gap-3">
           <button 
             onClick={handlePrev} 
@@ -229,7 +359,12 @@ export default function CalendarPage() {
             ))}
           </div>
           <button 
-            onClick={() => setShowAddEvent(!showAddEvent)} 
+            onClick={() => {
+              setIsEditing(false);
+              setEditingId(null);
+              resetEventForm();
+              setShowAddEvent(true);
+            }} 
             className="flex items-center gap-2 px-3 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-semibold hover:bg-primary/90 transition-all"
           >
             <Plus className="w-4 h-4" /> Add Event
@@ -259,15 +394,40 @@ export default function CalendarPage() {
               onChange={e => setForm(p => ({ ...p, end_time: e.target.value }))}
               className="bg-secondary/60 border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary/50"
             />
+            <input 
+              type="text"
+              placeholder="Description (optional)"
+              value={form.description}
+              onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
+              className="bg-secondary/60 border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary/50 flex-1 min-w-32"
+            />
+            <div className="flex gap-1">
+              {COLOR_OPTIONS.map(color => (
+                <button
+                  key={color}
+                  onClick={() => setForm(p => ({ ...p, color }))}
+                  className={`w-8 h-8 rounded-full border-2 transition-all ${
+                    form.color === color ? 'border-primary scale-110' : 'border-transparent'
+                  }`}
+                  style={{ backgroundColor: color }}
+                />
+              ))}
+            </div>
             <button 
               onClick={handleAddEvent} 
               disabled={saving} 
               className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-semibold hover:bg-primary/90 disabled:opacity-50 transition-all"
             >
-              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} Save
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} 
+              {isEditing ? 'Update' : 'Save'}
             </button>
             <button 
-              onClick={() => setShowAddEvent(false)} 
+              onClick={() => {
+                setShowAddEvent(false);
+                setIsEditing(false);
+                setEditingId(null);
+                resetEventForm();
+              }} 
               className="p-2 rounded-lg hover:bg-secondary/20 transition-colors"
             >
               <X className="w-4 h-4 text-muted-foreground" />
@@ -310,7 +470,6 @@ export default function CalendarPage() {
                       ${today ? 'bg-primary text-primary-foreground' : 'text-foreground'}`}>
                       {format(day, 'd')}
                     </div>
-                    {/* ✅ NEW: Quick add task button on day hover */}
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -324,13 +483,21 @@ export default function CalendarPage() {
                   </div>
                   <div className="space-y-0.5">
                     {dayEvents.slice(0, 2).map(e => (
-                      <div key={e.id} className={`text-xs px-1.5 py-0.5 rounded border truncate ${SOURCE_COLOR[e.source] || SOURCE_COLOR.manual}`}>
+                      <div 
+                        key={e.id || e._id} 
+                        onClick={(ev) => { ev.stopPropagation(); setShowEventDetails(e); }}
+                        className={`text-xs px-1.5 py-0.5 rounded border truncate cursor-pointer hover:opacity-80 ${SOURCE_COLOR[e.source] || SOURCE_COLOR.manual}`}
+                      >
                         {e.title}
                       </div>
                     ))}
                     {dayTasks.slice(0, 1).map(t => (
-                      <div key={t.id} className="text-xs px-1.5 py-0.5 rounded border truncate bg-orange-400/10 border-orange-400/30 text-orange-400">
-                        📌 {t.title}
+                      <div 
+                        key={t.id || t._id} 
+                        onClick={(ev) => { ev.stopPropagation(); setShowTaskDetails(t); }}
+                        className="text-xs px-1.5 py-0.5 rounded border truncate cursor-pointer hover:opacity-80 bg-orange-400/10 border-orange-400/30 text-orange-400"
+                      >
+                        {PRIORITY_OPTIONS.find(p => p.value === t.priority)?.icon || '📌'} {t.title}
                       </div>
                     ))}
                     {total > 3 && <div className="text-xs text-muted-foreground">+{total - 3} more</div>}
@@ -369,22 +536,33 @@ export default function CalendarPage() {
               ) : (
                 <div className="space-y-2">
                   {getEventsForDay(selectedDay).map(e => (
-                    <div key={e.id} className={`flex items-start gap-3 p-3 rounded-lg border ${SOURCE_COLOR[e.source] || SOURCE_COLOR.manual}`}>
-                      <Clock className="w-4 h-4 mt-0.5 shrink-0" />
-                      <div>
+                    <div 
+                      key={e.id || e._id} 
+                      className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer hover:opacity-80 ${SOURCE_COLOR[e.source] || SOURCE_COLOR.manual}`}
+                      onClick={() => setShowEventDetails(e)}
+                    >
+                      <div className="w-1 h-full min-h-12 rounded-full" style={{ backgroundColor: e.color || '#6C63FF' }} />
+                      <div className="flex-1">
                         <p className="text-sm font-medium">{e.title}</p>
                         <p className="text-xs opacity-70">
                           {format(new Date(e.start_time || e.start), 'h:mma')} – {format(new Date(e.end_time || e.end), 'h:mma')}
                         </p>
+                        {e.description && <p className="text-xs opacity-60 mt-1">{e.description}</p>}
                       </div>
                     </div>
                   ))}
                   {getTasksForDay(selectedDay).map(t => (
-                    <div key={t.id} className="flex items-start gap-3 p-3 rounded-lg border bg-orange-400/10 border-orange-400/30 text-orange-400">
-                      <Clock className="w-4 h-4 mt-0.5 shrink-0" />
-                      <div>
+                    <div 
+                      key={t.id || t._id} 
+                      className="flex items-start gap-3 p-3 rounded-lg border cursor-pointer hover:opacity-80 bg-orange-400/10 border-orange-400/30 text-orange-400"
+                      onClick={() => setShowTaskDetails(t)}
+                    >
+                      <div className="flex-1">
                         <p className="text-sm font-medium">{t.title}</p>
-                        <p className="text-xs opacity-70">Due {format(new Date(t.due_date), 'h:mma')} · {t.priority}</p>
+                        <p className="text-xs opacity-70">
+                          Due {format(new Date(t.due_date), 'h:mma')} · {t.priority}
+                        </p>
+                        {t.description && <p className="text-xs opacity-60 mt-1">{t.description}</p>}
                       </div>
                     </div>
                   ))}
@@ -404,7 +582,6 @@ export default function CalendarPage() {
                 <p className={`text-lg font-heading font-bold ${isToday(day) ? 'text-primary' : 'text-foreground'}`}>
                   {format(day, 'd')}
                 </p>
-                {/* ✅ NEW: Quick add task button in week view */}
                 <button
                   onClick={() => openTaskModal(day)}
                   className="mt-1 text-xs text-primary/60 hover:text-primary transition-colors"
@@ -428,7 +605,11 @@ export default function CalendarPage() {
                   return (
                     <div key={day.toISOString()} className={`border-r border-border/30 p-0.5 ${isToday(day) ? 'bg-primary/3' : ''}`}>
                       {hourEvents.map(e => (
-                        <div key={e.id} className={`text-xs px-1.5 py-1 rounded border truncate mb-0.5 ${SOURCE_COLOR[e.source] || SOURCE_COLOR.manual}`}>
+                        <div 
+                          key={e.id || e._id} 
+                          className={`text-xs px-1.5 py-1 rounded border truncate mb-0.5 cursor-pointer hover:opacity-80 ${SOURCE_COLOR[e.source] || SOURCE_COLOR.manual}`}
+                          onClick={() => setShowEventDetails(e)}
+                        >
                           {e.title}
                         </div>
                       ))}
@@ -441,19 +622,138 @@ export default function CalendarPage() {
         </div>
       )}
 
-      {/* ✅ NEW: Add Task Modal */}
+      {/* Event Details Modal */}
+      {showEventDetails && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="glass rounded-xl max-w-md w-full p-6 border border-border animate-fade-in">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-primary" />
+                Event Details
+              </h2>
+              <button
+                onClick={() => setShowEventDetails(null)}
+                className="p-1 hover:bg-secondary/60 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5 text-foreground" />
+              </button>
+            </div>
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: showEventDetails.color || '#6C63FF' }} />
+                <h3 className="text-lg font-semibold">{showEventDetails.title}</h3>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                <Clock className="w-4 h-4 inline mr-2" />
+                {format(new Date(showEventDetails.start_time || showEventDetails.start), 'PPP p')} – {format(new Date(showEventDetails.end_time || showEventDetails.end), 'p')}
+              </p>
+              {showEventDetails.description && (
+                <p className="text-sm">{showEventDetails.description}</p>
+              )}
+              <p className="text-xs text-muted-foreground">Source: {showEventDetails.source || 'manual'}</p>
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => {
+                  setShowEventDetails(null);
+                  openEventModal(new Date(showEventDetails.start_time || showEventDetails.start), showEventDetails);
+                }}
+                className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
+              >
+                <Edit2 className="w-4 h-4" /> Edit
+              </button>
+              <button
+                onClick={() => handleDeleteEvent(showEventDetails.id || showEventDetails._id)}
+                disabled={deleting}
+                className="flex-1 px-4 py-2 bg-red-500/20 text-red-500 rounded-lg hover:bg-red-500/30 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />} 
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Task Details Modal */}
+      {showTaskDetails && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="glass rounded-xl max-w-md w-full p-6 border border-border animate-fade-in">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
+                <ListTodo className="w-5 h-5 text-primary" />
+                Task Details
+              </h2>
+              <button
+                onClick={() => setShowTaskDetails(null)}
+                className="p-1 hover:bg-secondary/60 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5 text-foreground" />
+              </button>
+            </div>
+            <div className="space-y-3">
+              <h3 className="text-lg font-semibold">{showTaskDetails.title}</h3>
+              <p className="text-sm text-muted-foreground">
+                <Flag className="w-4 h-4 inline mr-2" />
+                Priority: {showTaskDetails.priority} {PRIORITY_OPTIONS.find(p => p.value === showTaskDetails.priority)?.icon}
+              </p>
+              {showTaskDetails.due_date && (
+                <p className="text-sm text-muted-foreground">
+                  <Clock className="w-4 h-4 inline mr-2" />
+                  Due: {format(new Date(showTaskDetails.due_date), 'PPP p')}
+                </p>
+              )}
+              {showTaskDetails.description && (
+                <p className="text-sm">{showTaskDetails.description}</p>
+              )}
+              {showTaskDetails.tags && showTaskDetails.tags.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {showTaskDetails.tags.map(tag => (
+                    <span key={tag} className="px-2 py-0.5 bg-secondary/60 rounded-full text-xs">
+                      #{tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => {
+                  setShowTaskDetails(null);
+                  openTaskModal(new Date(showTaskDetails.due_date), showTaskDetails);
+                }}
+                className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
+              >
+                <Edit2 className="w-4 h-4" /> Edit
+              </button>
+              <button
+                onClick={() => handleDeleteTask(showTaskDetails.id || showTaskDetails._id)}
+                disabled={deleting}
+                className="flex-1 px-4 py-2 bg-red-500/20 text-red-500 rounded-lg hover:bg-red-500/30 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />} 
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Task Modal */}
       {showAddTask && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="glass rounded-xl max-w-md w-full p-6 border border-border animate-fade-in">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
                 <ListTodo className="w-5 h-5 text-primary" />
-                Create Task for {selectedDay ? format(selectedDay, 'MMM d, yyyy') : ''}
+                {isEditing ? 'Edit Task' : 'Create Task'} for {selectedDay ? format(selectedDay, 'MMM d, yyyy') : ''}
               </h2>
               <button
                 onClick={() => {
                   setShowAddTask(false);
-                  setTaskForm({ title: '', description: '', priority: 'medium', due_date: '', tags: '' });
+                  setIsEditing(false);
+                  setEditingId(null);
+                  resetTaskForm();
                 }}
                 className="p-1 hover:bg-secondary/60 rounded-lg transition-colors"
               >
@@ -495,8 +795,8 @@ export default function CalendarPage() {
                     className="w-full px-3 py-2 bg-secondary/60 border border-border rounded-lg focus:outline-none focus:border-primary/50 text-foreground"
                   >
                     {PRIORITY_OPTIONS.map(p => (
-                      <option key={p.value} value={p.value} className={p.color}>
-                        {p.label}
+                      <option key={p.value} value={p.value}>
+                        {p.icon} {p.label}
                       </option>
                     ))}
                   </select>
@@ -530,13 +830,15 @@ export default function CalendarPage() {
                   className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {savingTask ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                  {savingTask ? 'Creating...' : 'Create Task'}
+                  {savingTask ? (isEditing ? 'Updating...' : 'Creating...') : (isEditing ? 'Update Task' : 'Create Task')}
                 </button>
                 <button
                   type="button"
                   onClick={() => {
                     setShowAddTask(false);
-                    setTaskForm({ title: '', description: '', priority: 'medium', due_date: '', tags: '' });
+                    setIsEditing(false);
+                    setEditingId(null);
+                    resetTaskForm();
                   }}
                   className="flex-1 px-4 py-2 bg-secondary/60 text-foreground rounded-lg hover:bg-secondary/80 transition-colors"
                 >

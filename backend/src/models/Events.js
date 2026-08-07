@@ -1,44 +1,40 @@
-// backend/src/models/Event.js
 import mongoose from 'mongoose';
 
-const eventSchema = new mongoose.Schema({
+const EventSchema = new mongoose.Schema({
   title: {
     type: String,
-    default: 'Focus Session',
+    required: true,
   },
   description: {
     type: String,
     default: '',
   },
-  duration_minutes: {
-    type: Number,
-    default: 25,
+  start: {
+    type: Date,
+    required: true,
   },
-  type: {
+  end: {
+    type: Date,
+    required: true,
+  },
+  status: {
     type: String,
-    enum: ['focus', 'meeting', 'break', 'other'],
-    default: 'focus',
+    enum: ['upcoming', 'ongoing', 'completed', 'cancelled'],
+    default: 'upcoming',
   },
   user_id: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true,
   },
-  created_date: {
+  created_at: {
     type: Date,
     default: Date.now,
   },
-  start_time: {
+  updated_at: {
     type: Date,
-  },
-  end_time: {
-    type: Date,
+    default: Date.now,
   },
 });
 
-// Add indexes for better query performance
-eventSchema.index({ user_id: 1, created_date: -1 });
-eventSchema.index({ user_id: 1, start_time: 1 });
-
-const Event = mongoose.model('Event', eventSchema);
-export default Event;
+export default mongoose.model('Event', EventSchema);

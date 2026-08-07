@@ -3,8 +3,37 @@ import { useAuth } from '@/lib/AuthContext.jsx';
 import { schedulfy } from '@/api/schedulfyClient';
 import { 
   Loader2, Camera, Shield, User, Zap, Clock, Bell, 
-  Mail, Copy, Calendar, CheckCircle2, LinkIcon, Settings as SettingsIcon 
-} from 'lucide-react'; // ✅ Added all missing imports
+  Mail, Copy, CheckCircle2, LinkIcon, Settings as SettingsIcon 
+} from 'lucide-react';
+
+// ✅ Google Calendar Icon Component
+const GoogleCalendarIcon = ({ className = "w-5 h-5" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M20 3H4C2.89543 3 2 3.89543 2 5V19C2 20.1046 2.89543 21 4 21H20C21.1046 21 22 20.1046 22 19V5C22 3.89543 21.1046 3 20 3Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M16 2V6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M8 2V6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M2 10H22" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M7 14H7.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M12 14H12.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M17 14H17.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M7 18H7.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M12 18H12.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M17 18H17.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+
+// ✅ Zoom Icon Component
+const ZoomIcon = ({ className = "w-5 h-5" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
+    <path d="M8 8L11 12L8 16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M13 8L16 12L13 16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    <circle cx="8" cy="8" r="0.5" fill="currentColor"/>
+    <circle cx="16" cy="8" r="0.5" fill="currentColor"/>
+    <circle cx="8" cy="16" r="0.5" fill="currentColor"/>
+    <circle cx="16" cy="16" r="0.5" fill="currentColor"/>
+  </svg>
+);
 
 const TIMEZONES = ['UTC', 'America/New_York', 'America/Los_Angeles', 'America/Chicago', 'Europe/London', 'Europe/Paris', 'Asia/Tokyo', 'Asia/Kolkata', 'Africa/Accra', 'Australia/Sydney'];
 
@@ -18,7 +47,7 @@ const DEMO_PROFILE = {
   display_name: 'Prince Baffs',
   bio: 'Product designer & productivity enthusiast',
   avatar_url: '',
-  timezone: 'Ghana/Accra',
+  timezone: 'Africa/Accra',
   peak_hours_start: 9,
   peak_hours_end: 17,
   reminder_1day_enabled: true,
@@ -64,8 +93,7 @@ export default function Settings() {
     if (user?.role === 'admin') {
       fetchUsers();
     }
-   
-  }, [user]); // ✅ fetchUsers is defined inside, so we disable the warning
+  }, [user]);
 
   const fetchUsers = async () => {
     setUsersError('');
@@ -73,7 +101,7 @@ export default function Settings() {
     try {
       const data = await schedulfy.users.getAll();
       setUsers(Array.isArray(data) ? data : []);
-    } catch (_err) { // ✅ Fixed: prefixed with underscore
+    } catch (_err) {
       setUsersError(_err.message || 'Unable to load users');
       setUsers([]);
     } finally {
@@ -86,7 +114,7 @@ export default function Settings() {
     try {
       const updated = await schedulfy.users.update(userId, { role });
       setUsers(prev => prev.map(u => (u.id === userId ? updated : u)));
-    } catch (_err) { // ✅ Fixed: prefixed with underscore
+    } catch (_err) {
       setUsersError(_err.message || 'Unable to update role');
     } finally {
       setAdminActionLoading(null);
@@ -99,7 +127,7 @@ export default function Settings() {
     try {
       await schedulfy.users.delete(userId);
       setUsers(prev => prev.filter(u => u.id !== userId));
-    } catch (_err) { // ✅ Fixed: prefixed with underscore
+    } catch (_err) {
       setUsersError(_err.message || 'Unable to remove user');
     } finally {
       setAdminActionLoading(null);
@@ -137,8 +165,6 @@ export default function Settings() {
   const initials = displayName.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
   const role = profile?.role || 'member';
   const roleConf = ROLE_CONFIG[role] || ROLE_CONFIG.member;
-
-  // ✅ Removed loading check since it's not used
 
   return (
     <div className="p-6 max-w-3xl mx-auto space-y-8 animate-fade-in">
@@ -360,19 +386,31 @@ export default function Settings() {
         )}
       </section>
 
-      {/* INTEGRATIONS */}
+      {/* INTEGRATIONS - ✅ FIXED WITH CUSTOM ICONS */}
       <section className="glass rounded-2xl border border-border p-6 space-y-4">
         <div className="flex items-center gap-2 mb-1">
           <div className="w-7 h-7 rounded-lg bg-green-400/10 border border-green-400/20 flex items-center justify-center">
-            <Calendar className="w-3.5 h-3.5 text-green-400" />
+            <GoogleCalendarIcon className="w-3.5 h-3.5 text-green-400" />
           </div>
           <h2 className="font-heading text-base font-bold tracking-wide">INTEGRATIONS</h2>
         </div>
         <div className="space-y-2">
           {[
-            { key: 'google_calendar_connected', label: 'Google Calendar', desc: 'Two-way sync for conflict detection and time-blocking', icon: '📅' },
-            { key: 'zoom_connected', label: 'Zoom', desc: 'Auto-create tasks from upcoming meetings', icon: '🎥' },
-          ].map(({ key, label, desc, icon }) => (
+            { 
+              key: 'google_calendar_connected', 
+              label: 'Google Calendar', 
+              desc: 'Two-way sync for conflict detection and time-blocking', 
+              icon: <GoogleCalendarIcon className="w-5 h-5 text-green-400" />,
+              connectUrl: 'https://calendar.google.com/'
+            },
+            { 
+              key: 'zoom_connected', 
+              label: 'Zoom', 
+              desc: 'Auto-create tasks from upcoming meetings', 
+              icon: <ZoomIcon className="w-5 h-5 text-blue-400" />,
+              connectUrl: 'https://zoom.us/'
+            },
+          ].map(({ key, label, desc, icon, connectUrl }) => (
             <div key={key} className="flex items-center justify-between p-3.5 rounded-xl bg-secondary/30 border border-border/50">
               <div className="flex items-center gap-3">
                 <span className="text-xl">{icon}</span>
@@ -381,13 +419,25 @@ export default function Settings() {
                   <p className="text-xs text-muted-foreground mt-0.5">{desc}</p>
                 </div>
               </div>
-              <button
-                onClick={() => setIntegrationsForm(p => ({ ...p, [key]: !p[key] }))}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all
-                  ${integrationsForm[key] ? 'bg-green-400/10 border border-green-400/20 text-green-400' : 'bg-secondary border border-border text-muted-foreground hover:text-foreground'}`}
-              >
-                {integrationsForm[key] ? <><CheckCircle2 className="w-3 h-3" /> Connected</> : <><LinkIcon className="w-3 h-3" /> Connect</>}
-              </button>
+              <div className="flex items-center gap-2">
+                {/* ✅ Add Visit button */}
+                <a
+                  href={connectUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 px-2 py-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <LinkIcon className="w-3 h-3" />
+                  Visit
+                </a>
+                <button
+                  onClick={() => setIntegrationsForm(p => ({ ...p, [key]: !p[key] }))}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all
+                    ${integrationsForm[key] ? 'bg-green-400/10 border border-green-400/20 text-green-400' : 'bg-secondary border border-border text-muted-foreground hover:text-foreground'}`}
+                >
+                  {integrationsForm[key] ? <><CheckCircle2 className="w-3 h-3" /> Connected</> : <><LinkIcon className="w-3 h-3" /> Connect</>}
+                </button>
+              </div>
             </div>
           ))}
         </div>

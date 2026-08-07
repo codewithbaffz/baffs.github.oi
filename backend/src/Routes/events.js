@@ -1,12 +1,13 @@
 import express from 'express';
 import { authenticate } from '../middleware/auth.js';
-import  Events  from '../models/Events.js';
+import Event from '../models/Events.js';
 
 const router = express.Router();
 
+// Get all events for the authenticated user
 router.get('/', authenticate, async (req, res) => {
   try {
-    const events = await Event.find({ user_id: req.userId }).sort({ created_date: -1 });
+    const events = await Event.find({ user_id: req.userId }).sort({ created_at: -1 });
     res.json(events);
   } catch (error) {
     console.error('Get events error:', error);
@@ -14,6 +15,7 @@ router.get('/', authenticate, async (req, res) => {
   }
 });
 
+// Create a new event
 router.post('/', authenticate, async (req, res) => {
   try {
     const event = new Event({ ...req.body, user_id: req.userId });
@@ -25,6 +27,7 @@ router.post('/', authenticate, async (req, res) => {
   }
 });
 
+// Get events by date
 router.get('/date/:date', authenticate, async (req, res) => {
   try {
     const date = new Date(req.params.date);
@@ -32,8 +35,8 @@ router.get('/date/:date', authenticate, async (req, res) => {
     const endOfDay = new Date(date.setHours(23, 59, 59, 999));
     const events = await Event.find({
       user_id: req.userId,
-      created_date: { $gte: startOfDay, $lte: endOfDay }
-    }).sort({ created_date: -1 });
+      created_at: { $gte: startOfDay, $lte: endOfDay }
+    }).sort({ created_at: -1 });
     res.json(events);
   } catch (error) {
     console.error('Get events by date error:', error);
@@ -41,16 +44,17 @@ router.get('/date/:date', authenticate, async (req, res) => {
   }
 });
 
+// Get events in date range
 router.get('/range', authenticate, async (req, res) => {
   try {
     const { start, end } = req.query;
     if (!start || !end) {
-      return res.status(400).json({ error: 'Missing parameters' });
+      return res.status(400).json({ error: 'Missing start and end date parameters' });
     }
     const events = await Event.find({
       user_id: req.userId,
-      created_date: { $gte: new Date(start), $lte: new Date(end) }
-    }).sort({ created_date: -1 });
+      created_at: { $gte: new Date(start), $lte: new Date(end) }
+    }).sort({ created_at: -1 });
     res.json(events);
   } catch (error) {
     console.error('Get events range error:', error);
@@ -58,6 +62,7 @@ router.get('/range', authenticate, async (req, res) => {
   }
 });
 
+// Update an event
 router.put('/:id', authenticate, async (req, res) => {
   try {
     const event = await Event.findOneAndUpdate(
@@ -75,6 +80,7 @@ router.put('/:id', authenticate, async (req, res) => {
   }
 });
 
+// Delete an event
 router.delete('/:id', authenticate, async (req, res) => {
   try {
     const event = await Event.findOneAndDelete({ _id: req.params.id, user_id: req.userId });

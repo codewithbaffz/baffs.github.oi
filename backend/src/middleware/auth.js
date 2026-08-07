@@ -1,13 +1,21 @@
+// backend/src/middleware/auth.js
 import jwt from 'jsonwebtoken';
 
 export const authenticate = async (req, res, next) => {
   try {
     // Get token from header
-    const token = req.header('Authorization')?.replace('Bearer ', '');
+    const authHeader = req.headers.authorization;
+    
+    if (!authHeader) {
+      return res.status(401).json({ 
+        message: 'No token provided' 
+      });
+    }
+    
+    const token = authHeader.replace('Bearer ', '');
     
     if (!token) {
       return res.status(401).json({ 
-        error: 'Unauthorized',
         message: 'No token provided' 
       });
     }
@@ -21,9 +29,20 @@ export const authenticate = async (req, res, next) => {
     next();
   } catch (error) {
     console.error('Auth error:', error);
+    
+    if (error.name === 'JsonWebTokenError') {
+      return res.status(401).json({ 
+        message: 'Invalid token' 
+      });
+    }
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({ 
+        message: 'Token expired' 
+      });
+    }
+    
     res.status(401).json({ 
-      error: 'Unauthorized',
-      message: 'Invalid or expired token' 
+      message: error.message || 'Authentication failed' 
     });
   }
 };
