@@ -1,8 +1,9 @@
 // pages/ResetPassword.jsx
-import React, { useState } from "react";
+import { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { Lock, Loader2, AlertTriangle } from "lucide-react";
 import AuthLayout from "@/components/AuthLayout";
+import schedulfy from "@/lib/schedulfy";
 
 export default function ResetPassword() {
   const [searchParams] = useSearchParams();
@@ -89,7 +90,7 @@ export default function ResetPassword() {
               placeholder="••••••••"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
-              className="pl-10 h-12 w-full border border-border bg-card rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition-all"
+              className="pl-10 h-12 w-full border border-border bg-card rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1"
               required
             />
           </div>
@@ -105,7 +106,7 @@ export default function ResetPassword() {
               placeholder="••••••••"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              className="pl-10 h-12 w-full border border-border bg-card rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition-all"
+              className="pl-10 h-12 w-full border border-border bg-card rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1"
               required
             />
           </div>
