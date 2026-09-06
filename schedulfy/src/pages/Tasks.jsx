@@ -17,10 +17,27 @@ export default function Tasks() {
   const [showNLP, setShowNLP] = useState(false);
   const [showManual, setShowManual] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
+  const [workspace, setWorkspace] = useState(null);
+  const [members, setMembers] = useState([]);
 
   // Manual task form state
-  const [form, setForm] = useState({ title: '', description: '', priority: 'medium', due_date: '', tags: '' });
+  const [form, setForm] = useState({ title: '', description: '', priority: 'medium', due_date: '', tags: '', assignee_id: '' });
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    const loadWorkspace = async () => {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch('/api/workspace', { headers: { Authorization: `Bearer ${token}` } });
+      if (!response.ok) return;
+      const workspaces = await response.json();
+      if (!workspaces[0]) return;
+      const detailsResponse = await fetch(`/api/workspace/${workspaces[0].id}`, { headers: { Authorization: `Bearer ${token}` } });
+      const details = detailsResponse.ok ? await detailsResponse.json() : workspaces[0];
+      setWorkspace(details);
+      setMembers(details.members || []);
+    };
+    if (user) loadWorkspace().catch((error) => console.error('Failed to load workspace members:', error));
+  }, [user]);
 
   const createManual = async () => {
     if (!form.title.trim()) return;
@@ -34,8 +51,10 @@ export default function Tasks() {
         tags: form.tags ? form.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
         status: 'todo',
         source: 'manual',
+        workspace_id: workspace?._id || workspace?.id,
+        assignee_id: form.assignee_id || null,
       });
-      setForm({ title: '', description: '', priority: 'medium', due_date: '', tags: '' });
+      setForm({ title: '', description: '', priority: 'medium', due_date: '', tags: '', assignee_id: '' });
       setShowManual(false);
     } catch (error) {
       console.error('Failed to create task:', error);
@@ -99,6 +118,18 @@ export default function Tasks() {
                 className="w-full bg-secondary/60 border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary/50"
               />
             </div>
+            {members.length > 0 && (
+              <div className="md:col-span-2">
+                <select
+                  value={form.assignee_id}
+                  onChange={e => setForm(p => ({ ...p, assignee_id: e.target.value }))}
+                  className="w-full bg-secondary/60 border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary/50"
+                >
+                  <option value="">Unassigned</option>
+                  {members.map(member => <option key={member._id || member.id} value={member._id || member.id}>{member.name || member.full_name || member.email}</option>)}
+                </select>
+              </div>
+            )}
             <div className="md:col-span-2">
               <textarea
                 placeholder="Description (optional)"

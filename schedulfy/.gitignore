@@ -1,9 +1,32 @@
-#env
+# ============================================
+# ENVIRONMENT VARIABLES
+# ============================================
 .env
 .env.*
+!.env.example
+!.env.sample
 
-# Logs
-/logs
+# ============================================
+# DEPENDENCIES
+# ============================================
+node_modules/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# ============================================
+# BUILD OUTPUTS
+# ============================================
+dist/
+dist-ssr/
+build/
+out/
+*.tsbuildinfo
+
+# ============================================
+# LOGS
+# ============================================
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -11,21 +34,430 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-*.local
+# ============================================
+# OS FILES
+# ============================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
 
-# Editor directories and files
+# ============================================
+# EDITOR FILES
+# ============================================
 .vscode/*
 !.vscode/extensions.json
-.idea
-.DS_Store
+.idea/
+*.swp
+*.swo
+*~
+.tern-port
+.vimrc
+.vscode-test
+
+# ============================================
+# MISCELLANEOUS
+# ============================================
+*.local
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
-
-.env
+*.tmp
+*.temp
+.cache
 .vite
+.parcel-cache
+.next
+.nuxt
+
+# ============================================
+# TEST COVERAGE
+# ============================================
+coverage/
+.nyc_output
+*.lcov
+
+# ============================================
+# BACKEND SPECIFIC
+# ============================================
+# MongoDB data (if using local)
+/data/
+/db/
+mongodb-data/
+
+# Redis data
+dump.rdb
+
+# Uploads directory
+uploads/
+temp/
+
+# SSL certificates
+*.pem
+*.key
+*.crt
+*.p12
+
+# ============================================
+# DEBUG
+# ============================================
+.terraform/
+*.tfstate*
+.terragrunt-cache/
+
+# ============================================
+# SECRETS (Never commit these!)
+# ============================================
+*.pem
+*.key
+*.crt
+*.p12
+secrets.json
+secrets.yaml
+credentials.json
+oauth2.json
+service-account.json
+
+# ============================================
+# DATABASE
+# ============================================
+*.sqlite
+*.sqlite3
+*.db
+
+# ============================================
+# DOCKER
+# ============================================
+docker-compose.override.yml
+.dockerignore
+Dockerfile.*
+
+# ============================================
+# SENTRY
+# ============================================
+.sentrycli
+
+# ============================================
+# DEPLOYMENT
+# ============================================
+vercel.json
+netlify.toml
+firebase.json
+now.json
+
+# ============================================
+# BACKUP FILES
+# ============================================
+*.bak
+*.backup
+*.old
+*.orig
+
+# ============================================
+# RUNTIME DATA
+# ============================================
+*.pid
+*.seed
+*.pid.lock
+
+# ============================================
+# STORYBOOK
+# ============================================
+storybook-static/
+node_modules/.cache/storybook/
+
+# ============================================
+# SERVICE WORKER
+# ============================================
+sw.js
+sw.*.js
+
+# ============================================
+# TAILWIND
+# ============================================
+*.css.map
+tailwind-output.css
+
+# ============================================
+# ANALYTICS / PERFORMANCE
+# ============================================
+.stats/
+.reports/
+
+# ============================================
+# LOCAL DEVELOPMENT FILES
+# ============================================
+.vercel/
+.blitz/
+.vitest/
+playwright-report/
+test-results/
+
+# ============================================
+# WINDOWS
+# ============================================
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msm
+*.msp
+
+# ============================================
+# MACOS
+# ============================================
+*.dmg
+*.app
+.fseventsd
+.metadata_never_index
+.Spotlight-V100
+.Trashes
+
+# ============================================
+# LINUX
+# ============================================
+*.deb
+*.rpm
+*.tar.gz
+*.tgz
+*.zip
+
+# ============================================
+# CONFIG FILES WITH SECRETS
+# ============================================
+*.config.js
+!vite.config.js
+!jest.config.js
+config.local.json
+config.local.js
+auth.config.js
+
+# ============================================
+# SCRIPTS
+# ============================================
+*.ps1
+*.sh
+!*.sh.example
+
+# ============================================
+# SSL / CERTIFICATES
+# ============================================
+certs/
+certificates/
+ssl/
+
+# ============================================
+# SESSION FILES
+# ============================================
+*.session
+*.session.json
+*.cookie
+
+# ============================================
+# DATABASE MIGRATIONS (local only)
+# ============================================
+prisma/*.db
+prisma/*.sqlite
+prisma/migrations/*.sql
+
+# ============================================
+# VS CODE
+# ============================================
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/launch.json
+
+# ============================================
+# NPM
+# ============================================
+.npm
+.npmrc
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+yarn-error.log
+
+# ============================================
+# WSL / WSL2
+# ============================================
+.wslconfig
+
+# ============================================
+# PYTHON (if using Python backend)
+# ============================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+pythonenv*
+
+# ============================================
+# JAVA
+# ============================================
+*.class
+*.jar
+*.war
+*.ear
+target/
+*.log
+hs_err_pid*
+
+# ============================================
+# DOTFILES
+# ============================================
+.*
+!.env.example
+!.gitignore
+!.gitattributes
+!.npmrc
+!.nvmrc
+!.editorconfig
+!.eslintrc
+!.prettierrc
+!.dockerignore
+!.eslintignore
+!.prettierignore
+!.stylelintrc
+!.babelrc
+!.eslintrc.json
+!.prettierrc.json
+!.stylelintrc.json
+!.eslintrc.js
+!.prettierrc.js
+!.stylelintrc.js
+!.babelrc.js
+
+# ============================================
+# FRONTEND SPECIFIC (Vite/React)
+# ============================================
+.vite
+.vercel
+.netlify
+.storybook
+storybook-static
+.parcel-cache
+.cache
+build/
+dist/
+out/
+*.hot-update.js
+*.hot-update.json
+
+# ============================================
+# BACKEND SPECIFIC (Node/Express)
+# ============================================
+node_modules/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+dist/
+build/
+coverage/
+.nyc_output
+.env
+.env.*
+!.env.example
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+lerna-debug.log*
+.pnpm-store/
+.rollup.cache/
+.eslintcache
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.pid
+*.seed
+*.pid.lock
+*.db
+*.sqlite
+*.sqlite3
+/data
+/db
+mongodb-data
+uploads
+temp
+*.pem
+*.key
+*.crt
+*.p12
+secrets.json
+secrets.yaml
+credentials.json
+oauth2.json
+service-account.json
+*.session
+*.session.json
+*.cookie
+
+# ============================================
+# DOCKER
+# ============================================
+docker-compose.override.yml
+.dockerignore
+Dockerfile.*
+*.dockerfile
+!.dockerfile.example
+
+# ============================================
+# KUBERNETES
+# ============================================
+*.kubeconfig
+*.kubeconfig.lock
+*.kubeconfig.local
+*.kubeconfig.backup
+*.kubeconfig.old
+
+# ============================================
+# TERRAFORM
+# ============================================
+*.tfstate
+*.tfstate.*
+.terraform/
+.terragrunt-cache/
+*.terraform.lock.hcl
+
+# ============================================
+# ANSIBLE
+# ============================================
+*.retry
+*.tmp
+*.backup
+
+# ============================================
+# JENKINS
+# ============================================
+*.jenkinsfile
+*.jenkinsfile.backup
+*.jenkinsfile.old
+*.jenkinsfile.tmp
+workspace/
+jobs/
+logs/
+*.log
+*.tmp
+*.backup
+*.old

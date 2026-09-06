@@ -17,6 +17,7 @@ import Templates from "./pages/Templates";
 import { useAuth } from "./lib/AuthContext";
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
+import AcceptInvitation from './pages/AcceptInvitation';
 
 
 export default function App() {
@@ -24,11 +25,12 @@ export default function App() {
     <TaskProvider>
       <EventProvider>
         <Routes>
-          {/* ✅ Public routes - no authentication required */}
+          
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />  {/* ✅ MOVED HERE */}
-          <Route path="/reset-password" element={<ResetPassword />} />    {/* ✅ MOVED HERE */}
+          <Route path="/forgot-password" element={<ForgotPassword />} />  
+          <Route path="/reset-password" element={<ResetPassword />} />    
+          <Route path="/accept-invite" element={<AcceptInvitation />} />
           
           {/* Protected routes - require authentication */}
           <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>

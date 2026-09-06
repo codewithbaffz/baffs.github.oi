@@ -1,7 +1,9 @@
-// Projects.jsx
-import { useState, useEffect } from 'react';
+// Projects.jsx - Complete fixed version
+
+import { useState, useEffect, useCallback } from 'react';
 import { isPast } from 'date-fns';
 import { useTasks } from '@/context/TaskContext';
+import { useAuth } from '@/lib/AuthContext';
 import { 
   Plus, Trash2, X, Sparkles, CheckSquare, Clock, ChevronRight, 
   Filter, Loader2, FolderOpen, Users, UserPlus, User, 
@@ -10,7 +12,6 @@ import {
 } from 'lucide-react';
 import TaskCard from '@/components/TaskCard';
 import NLPTaskInput from '@/components/NLPTaskInput';
-import schedulfySDK from '@/lib/sdk';
 
 const STATUS_COLOR = {
   active: 'text-green-400 bg-green-400/10 border-green-400/20',
@@ -43,6 +44,7 @@ const SORT_OPTIONS = ['Due Date', 'Priority', 'Created Date'];
 
 export default function Projects() {
   const { tasks, loading: tasksLoading, createTask, updateTask, deleteTask } = useTasks();
+  const { user } = useAuth();
   
   const [projects, setProjects] = useState(DEMO_PROJECTS);
   const [selectedProject, setSelectedProject] = useState(null);
@@ -71,19 +73,53 @@ export default function Projects() {
   
   // Filter by assignee
   const [assigneeFilter, setAssigneeFilter] = useState('all');
+  const [workspace, setWorkspace] = useState(null);
 
-  // ✅ Load projects from backend using your SDK
+  const loadWorkspaceMembers = useCallback(async () => {
+    const token = localStorage.getItem('authToken');
+    if (!token || !user) return;
+
+    try {
+      const response = await fetch('/api/workspace', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!response.ok) return;
+      const workspaces = await response.json();
+      const currentWorkspace = workspaces[0];
+      if (!currentWorkspace) return;
+
+      const detailsResponse = await fetch(`/api/workspace/${currentWorkspace.id || currentWorkspace._id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const details = detailsResponse.ok ? await detailsResponse.json() : currentWorkspace;
+      setWorkspace(details);
+      setTeamMembers((details.members || []).map((member) => {
+        const id = String(member._id || member.id);
+        const name = member.name || member.full_name || member.email;
+        return {
+          id,
+          name,
+          email: member.email,
+          avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=6C63FF&color=fff`,
+        };
+      }));
+    } catch (error) {
+      console.error('Failed to load workspace members:', error);
+    }
+  }, [user]);
+
+  // Load projects and workspace members after authentication is available.
   useEffect(() => {
     loadProjects();
-  }, []);
+    loadWorkspaceMembers();
+  }, [user, loadWorkspaceMembers]);
 
-  // ✅ UPDATED: Real API call for fetching projects
+  // Load projects from backend with validation
   const loadProjects = async () => {
     setLoading(true);
     try {
       console.log('📋 Fetching projects from backend...');
       
-      // Get the auth token
       const token = localStorage.getItem('authToken');
       if (!token) {
         console.log('No auth token found - using demo data');
@@ -91,8 +127,6 @@ export default function Projects() {
         return;
       }
 
-      // ✅ Use your SDK or direct fetch
-      // Option 1: Using fetch directly
       const response = await fetch('/api/projects', {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -104,25 +138,56 @@ export default function Projects() {
         const data = await response.json();
         console.log('✅ Projects fetched:', data);
         
-        // Check if data is an array, if not, try to extract it
-        const projectsData = Array.isArray(data) ? data : data.projects || data.data || [];
+        const projectsData = (Array.isArray(data) ? data : data.projects || data.data || [])
+          .map((project) => ({ ...project, id: project.id || project._id }));
         if (projectsData.length > 0) {
-          setProjects(projectsData);
+          // Filter out projects without valid IDs
+          const validProjects = projectsData.filter(p => p && p.id);
+          if (validProjects.length > 0) {
+            setProjects(validProjects);
+          } else {
+            console.log('Projects missing valid IDs - using demo data');
+            setProjects(DEMO_PROJECTS);
+          }
         } else {
           console.log('No projects from backend - using demo data');
+          setProjects(DEMO_PROJECTS);
         }
       } else {
         console.log('Backend response not OK - using demo data');
+        setProjects(DEMO_PROJECTS);
       }
     } catch (error) {
       console.error('❌ Failed to fetch projects:', error);
       console.log('Using demo data as fallback');
+      setProjects(DEMO_PROJECTS);
     } finally {
       setLoading(false);
     }
   };
 
-  // ✅ UPDATED: Create project with real API
+  // Handle project selection with validation
+  const handleProjectSelect = (project) => {
+    // Validate project
+    if (!project || typeof project !== 'object') {
+      console.error('Invalid project:', project);
+      return;
+    }
+    
+    if (!project.id) {
+      console.error('Project missing id:', project);
+      return;
+    }
+    
+    console.log('🖱️ Clicked project:', project.name || project.id);
+    
+    if (selectedProject && selectedProject.id === project.id) {
+      setSelectedProject(null);
+    } else {
+      setSelectedProject(project);
+    }
+  };
+
   const createProject = async () => {
     if (!form.name.trim()) return;
     setSaving(true);
@@ -151,12 +216,12 @@ export default function Projects() {
       });
 
       if (response.ok) {
-        const created = await response.json();
+        const createdResponse = await response.json();
+        const created = { ...createdResponse, id: createdResponse.id || createdResponse._id };
         console.log('✅ Project created:', created);
         setProjects(prev => [created, ...prev]);
         setSelectedProject(created);
       } else {
-        // Fallback: save locally
         console.log('Backend creation failed - saving locally');
         const localProject = {
           id: Date.now().toString(),
@@ -168,7 +233,6 @@ export default function Projects() {
       }
     } catch (error) {
       console.error('❌ Failed to create project:', error);
-      // Fallback: save locally
       const localProject = {
         id: Date.now().toString(),
         name: form.name,
@@ -187,8 +251,12 @@ export default function Projects() {
     setSaving(false);
   };
 
-  // ✅ UPDATED: Delete project with real API
   const deleteProject = async (id) => {
+    if (!id) {
+      console.error('Cannot delete project: No ID');
+      return;
+    }
+    
     if (!window.confirm('Delete this project and all its tasks?')) return;
     
     try {
@@ -209,7 +277,6 @@ export default function Projects() {
     }
     
     setProjects(prev => prev.filter(p => p.id !== id));
-    // Remove tasks associated with this project
     const tasksToRemove = tasks.filter(t => t.project_id === id);
     for (const task of tasksToRemove) {
       await deleteTask(task.id);
@@ -217,8 +284,12 @@ export default function Projects() {
     if (selectedProject?.id === id) setSelectedProject(null);
   };
 
-  // ✅ UPDATED: Update project status with real API
   const updateProjectStatus = async (projectId, newStatus) => {
+    if (!projectId) {
+      console.error('Cannot update project: No ID');
+      return;
+    }
+    
     try {
       const token = localStorage.getItem('authToken');
       if (token) {
@@ -244,30 +315,44 @@ export default function Projects() {
       console.error('Failed to update project status:', error);
     }
     
-    // Fallback: update locally
     setProjects(prev => prev.map(p => p.id === projectId ? { ...p, status: newStatus } : p));
     if (selectedProject?.id === projectId) {
       setSelectedProject(prev => ({ ...prev, status: newStatus }));
     }
   };
 
-  // Assign task to team member
+  // Assign task to member
   const assignTaskToMember = async (taskId, memberId) => {
     try {
       const task = tasks.find(t => (t.id || t._id) === taskId);
-      if (!task) return;
+      if (!task) {
+        console.error('Task not found:', taskId);
+        return;
+      }
+      
+      const member = teamMembers.find(m => String(m.id) === String(memberId));
+      if (!member) {
+        console.error('Member not found:', memberId);
+        return;
+      }
+      
+      console.log(`📝 Assigning task "${task.title}" to ${member.name}`);
       
       const updatedTask = { 
         ...task, 
         assignee_id: memberId,
-        assignee_name: teamMembers.find(m => m.id === memberId)?.name || null
+        assignee_name: member.name,
+        assignee_avatar: member.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(member.name)}&background=6C63FF&color=fff`
       };
       
       await updateTask(taskId, updatedTask);
+      
+      console.log('✅ Task assigned successfully:', updatedTask);
+      
       setShowAssignModal(false);
       setSelectedTaskForAssign(null);
     } catch (error) {
-      console.error('Failed to assign task:', error);
+      console.error('❌ Failed to assign task:', error);
     }
   };
 
@@ -277,42 +362,72 @@ export default function Projects() {
       const task = tasks.find(t => (t.id || t._id) === taskId);
       if (!task) return;
       
+      console.log(`📝 Unassigning task "${task.title}"`);
+      
       const updatedTask = { 
         ...task, 
         assignee_id: null,
-        assignee_name: null
+        assignee_name: null,
+        assignee_avatar: null
       };
       
       await updateTask(taskId, updatedTask);
+      
+      console.log('✅ Task unassigned successfully');
+      setShowAssignModal(false);
+      setSelectedTaskForAssign(null);
     } catch (error) {
-      console.error('Failed to unassign task:', error);
+      console.error('❌ Failed to unassign task:', error);
     }
   };
 
-  // Get tasks for a specific project from the global task context
+  // Helper function to get assignee display info
+  const getAssigneeInfo = (task) => {
+    if (!task || !task.assignee_id) return null;
+    
+    const member = teamMembers.find(m => String(m.id) === String(task.assignee_id));
+    if (member) {
+      return {
+        name: member.name,
+        avatar: member.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(member.name)}&background=6C63FF&color=fff`,
+        id: member.id
+      };
+    }
+    
+    if (task.assignee_name) {
+      return {
+        name: task.assignee_name,
+        avatar: task.assignee_avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(task.assignee_name)}&background=6C63FF&color=fff`,
+        id: task.assignee_id
+      };
+    }
+    
+    return null;
+  };
+
   const getProjectTasks = (projectId) => {
-    return tasks.filter(t => t.project_id === projectId);
+    if (!projectId) return [];
+    return tasks.filter(t => String(t.project_id) === String(projectId));
   };
 
-  // Get assigned tasks for a specific member
   const getTasksForMember = (memberId) => {
-    return tasks.filter(t => t.assignee_id === memberId);
+    if (!memberId) return [];
+    return tasks.filter(t => String(t.assignee_id) === String(memberId));
   };
 
-  // Filter and sort tasks
   const getFilteredAndSortedTasks = (projectId) => {
+    if (!projectId) return [];
+    
     let filtered = getProjectTasks(projectId);
     
-    // Filter by assignee
     if (assigneeFilter !== 'all') {
       if (assigneeFilter === 'unassigned') {
         filtered = filtered.filter(t => !t.assignee_id);
       } else {
-        filtered = filtered.filter(t => t.assignee_id === assigneeFilter);
+        filtered = filtered.filter(t => String(t.assignee_id) === String(assigneeFilter));
       }
     }
     
-    // Filter by view
     if (taskView !== 'All') {
       const statusMap = {
         'Todo': 'todo',
@@ -328,7 +443,6 @@ export default function Projects() {
       }
     }
     
-    // Filter by search
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(t => 
@@ -338,7 +452,6 @@ export default function Projects() {
       );
     }
     
-    // Sort
     if (sortBy === 'Due Date') {
       filtered.sort((a, b) => {
         if (!a.due_date) return 1;
@@ -360,12 +473,16 @@ export default function Projects() {
   };
 
   const getProgress = (projectId) => {
+    if (!projectId) return 0;
     const pts = getProjectTasks(projectId);
     if (pts.length === 0) return 0;
     return Math.round((pts.filter(t => t.status === 'done').length / pts.length) * 100);
   };
 
   const getTaskStats = (projectId) => {
+    if (!projectId) {
+      return { total: 0, todo: 0, inProgress: 0, done: 0, overdue: 0 };
+    }
     const pts = getProjectTasks(projectId);
     return {
       total: pts.length,
@@ -376,7 +493,6 @@ export default function Projects() {
     };
   };
 
-  // Handle task updates using the context
   const handleTaskUpdate = async (taskId, updatedTask) => {
     try {
       const id = taskId || updatedTask.id || updatedTask._id || updatedTask.task_id;
@@ -386,7 +502,6 @@ export default function Projects() {
     }
   };
 
-  // Handle task creation from AI
   const handleTaskCreated = async (task) => {
     if (!selectedProject) {
       console.error('No project selected');
@@ -397,6 +512,7 @@ export default function Projects() {
       const taskData = {
         ...task,
         project_id: selectedProject.id,
+        workspace_id: workspace?._id || workspace?.id,
         status: task.status || 'todo',
         source: task.source || 'manual',
       };
@@ -412,7 +528,6 @@ export default function Projects() {
     }
   };
 
-  // Handle manual task creation
   const handleManualTaskCreate = async () => {
     if (!manualTaskTitle.trim() || !selectedProject) {
       console.error('No task title or project selected');
@@ -421,14 +536,18 @@ export default function Projects() {
 
     setIsManualCreating(true);
     try {
+      const member = manualTaskAssignee ? teamMembers.find(m => m.id === manualTaskAssignee) : null;
+      
       const taskData = {
         title: manualTaskTitle.trim(),
         description: manualTaskDescription.trim(),
         priority: manualTaskPriority || 'medium',
         due_date: manualTaskDueDate || null,
         assignee_id: manualTaskAssignee || null,
-        assignee_name: manualTaskAssignee ? teamMembers.find(m => m.id === manualTaskAssignee)?.name || null : null,
+        assignee_name: member?.name || null,
+        assignee_avatar: member?.avatar || null,
         project_id: selectedProject.id,
+        workspace_id: workspace?._id || workspace?.id,
         status: 'todo',
         source: 'manual',
         tags: [],
@@ -438,7 +557,6 @@ export default function Projects() {
       
       const created = await createTask(taskData);
       if (created) {
-        // Reset form
         setManualTaskTitle('');
         setManualTaskDescription('');
         setManualTaskPriority('medium');
@@ -462,7 +580,6 @@ export default function Projects() {
   };
 
   const isLoading = loading || tasksLoading;
-
   const stats = selectedProject ? getTaskStats(selectedProject.id) : null;
 
   // Task Assignment Modal
@@ -470,6 +587,7 @@ export default function Projects() {
     if (!selectedTaskForAssign) return null;
     
     const currentAssignee = selectedTaskForAssign.assignee_id;
+    const currentAssigneeName = selectedTaskForAssign.assignee_name;
     
     return (
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
@@ -494,50 +612,66 @@ export default function Projects() {
             Assign "{selectedTaskForAssign.title}" to a team member
           </p>
           
-          <div className="space-y-2">
-            {teamMembers.map(member => {
-              const isAssigned = currentAssignee === member.id;
-              const taskCount = getTasksForMember(member.id).length;
-              
-              return (
-                <button
-                  key={member.id}
-                  onClick={() => assignTaskToMember(getTaskId(selectedTaskForAssign), member.id)}
-                  className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-all ${
-                    isAssigned 
-                      ? 'border-primary/50 bg-primary/10' 
-                      : 'border-border hover:border-primary/30 hover:bg-secondary/30'
-                  }`}
-                >
-                  <img 
-                    src={member.avatar} 
-                    alt={member.name} 
-                    className="w-10 h-10 rounded-full object-cover"
-                  />
-                  <div className="flex-1 text-left">
-                    <p className="text-sm font-medium text-foreground">{member.name}</p>
-                    <p className="text-xs text-muted-foreground">{member.email}</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground">{taskCount} tasks</span>
-                    {isAssigned && (
-                      <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center">
-                        <Check className="w-3 h-3 text-primary-foreground" />
-                      </div>
-                    )}
-                  </div>
-                </button>
-              );
-            })}
+          {currentAssignee && currentAssigneeName && (
+            <div className="mb-4 p-3 rounded-lg bg-primary/10 border border-primary/20 flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+                <UserCheck className="w-4 h-4 text-primary" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Currently assigned to</p>
+                <p className="text-sm font-medium text-foreground">{currentAssigneeName}</p>
+              </div>
+            </div>
+          )}
+          
+          <div className="space-y-2 max-h-64 overflow-y-auto">
+            {teamMembers.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Users className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                <p className="text-sm">No team members available</p>
+                <p className="text-xs">Add team members to assign tasks</p>
+              </div>
+            ) : (
+              teamMembers.map(member => {
+                const isAssigned = currentAssignee === member.id;
+                const taskCount = getTasksForMember(member.id).length;
+                
+                return (
+                  <button
+                    key={`assign-${member.id}`}
+                    onClick={() => assignTaskToMember(getTaskId(selectedTaskForAssign), member.id)}
+                    className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-all ${
+                      isAssigned 
+                        ? 'border-primary/50 bg-primary/10' 
+                        : 'border-border hover:border-primary/30 hover:bg-secondary/30'
+                    }`}
+                  >
+                    <img 
+                      src={member.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(member.name)}&background=6C63FF&color=fff`} 
+                      alt={member.name} 
+                      className="w-10 h-10 rounded-full object-cover"
+                    />
+                    <div className="flex-1 text-left">
+                      <p className="text-sm font-medium text-foreground">{member.name}</p>
+                      <p className="text-xs text-muted-foreground">{member.email || 'No email'}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">{taskCount} tasks</span>
+                      {isAssigned && (
+                        <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                          <Check className="w-3 h-3 text-primary-foreground" />
+                        </div>
+                      )}
+                    </div>
+                  </button>
+                );
+              })
+            )}
           </div>
           
           {currentAssignee && (
             <button
-              onClick={() => {
-                unassignTask(getTaskId(selectedTaskForAssign));
-                setShowAssignModal(false);
-                setSelectedTaskForAssign(null);
-              }}
+              onClick={() => unassignTask(getTaskId(selectedTaskForAssign))}
               className="mt-4 w-full text-center text-sm text-red-500 hover:text-red-400 transition-colors"
             >
               Remove assignment
@@ -567,7 +701,7 @@ export default function Projects() {
               className="w-full bg-secondary/60 border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder-muted-foreground resize-none focus:outline-none focus:border-primary/50" />
             <div className="flex gap-2 flex-wrap">
               {PROJECT_COLORS.map(c => (
-                <button key={c} onClick={() => setForm(p => ({ ...p, color: c }))}
+                <button key={`color-${c}`} onClick={() => setForm(p => ({ ...p, color: c }))}
                   className={`w-6 h-6 rounded-full border-2 transition-all ${form.color === c ? 'border-white scale-125' : 'border-transparent'}`}
                   style={{ backgroundColor: c }} />
               ))}
@@ -596,6 +730,12 @@ export default function Projects() {
             </div>
           ) : (
             projects.map(proj => {
+              // Skip rendering if project doesn't have a valid ID
+              if (!proj || !proj.id) {
+                console.warn('Skipping project with no id:', proj);
+                return null;
+              }
+              
               const progress = getProgress(proj.id);
               const taskCount = getProjectTasks(proj.id).length;
               const isSelected = selectedProject?.id === proj.id;
@@ -603,19 +743,19 @@ export default function Projects() {
               
               return (
                 <div
-                  key={proj.id}
-                  onClick={() => setSelectedProject(isSelected ? null : proj)}
+                  key={`project-${proj.id}`}
+                  onClick={() => handleProjectSelect(proj)}
                   className={`p-4 rounded-xl border cursor-pointer transition-all hover:border-primary/30
                     ${isSelected ? 'border-primary/50 bg-primary/5 ring-1 ring-primary/30' : 'border-border bg-card/50 hover:bg-secondary/30'}`}
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-2 min-w-0">
                       <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: proj.color || '#6C63FF' }} />
-                      <p className="font-semibold text-sm text-foreground truncate">{proj.name}</p>
+                      <p className="font-semibold text-sm text-foreground truncate">{proj.name || 'Unnamed'}</p>
                     </div>
                     <div className="flex items-center gap-1">
                       <span className={`text-xs px-1.5 py-0.5 rounded-full border ${STATUS_COLOR[proj.status] || STATUS_COLOR.active}`}>
-                        {proj.status}
+                        {proj.status || 'active'}
                       </span>
                       {isSelected && <ChevronRight className="w-4 h-4 text-primary ml-1" />}
                     </div>
@@ -644,32 +784,31 @@ export default function Projects() {
       </div>
 
       {/* Project Detail */}
-      {selectedProject && (
+      {selectedProject && selectedProject.id && (
         <div className="flex-1 flex flex-col overflow-hidden animate-fade-in">
           <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-card/30">
             <div className="flex items-center gap-3">
               <div className="w-4 h-4 rounded-full" style={{ backgroundColor: selectedProject.color || '#6C63FF' }} />
               <div>
-                <h2 className="font-heading text-xl font-bold tracking-wide">{selectedProject.name}</h2>
+                <h2 className="font-heading text-xl font-bold tracking-wide">{selectedProject.name || 'Unnamed'}</h2>
                 {selectedProject.description && <p className="text-xs text-muted-foreground">{selectedProject.description}</p>}
               </div>
             </div>
             <div className="flex items-center gap-2">
-              {/* Team Members Display */}
               <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-secondary/30 border border-border">
                 <Users className="w-3.5 h-3.5 text-muted-foreground" />
                 <div className="flex -space-x-1.5">
                   {teamMembers.slice(0, 3).map(member => (
                     <img
-                      key={member.id}
-                      src={member.avatar}
+                      key={`avatar-${member.id}`}
+                      src={member.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(member.name)}&background=6C63FF&color=fff`}
                       alt={member.name}
                       className="w-6 h-6 rounded-full border-2 border-background"
                       title={member.name}
                     />
                   ))}
                   {teamMembers.length > 3 && (
-                    <div className="w-6 h-6 rounded-full bg-secondary border-2 border-background flex items-center justify-center text-[8px] font-bold text-muted-foreground">
+                    <div key="more-members" className="w-6 h-6 rounded-full bg-secondary border-2 border-background flex items-center justify-center text-[8px] font-bold text-muted-foreground">
                       +{teamMembers.length - 3}
                     </div>
                   )}
@@ -719,16 +858,15 @@ export default function Projects() {
               />
             </div>
             
-            {/* Assignee Filter */}
             <select
               value={assigneeFilter}
               onChange={(e) => setAssigneeFilter(e.target.value)}
               className="bg-secondary/60 border border-border rounded-lg px-2 py-1.5 text-xs text-foreground focus:outline-none focus:border-primary/50"
             >
-              <option value="all">All Members</option>
-              <option value="unassigned">Unassigned</option>
+              <option key="all" value="all">All Members</option>
+              <option key="unassigned" value="unassigned">Unassigned</option>
               {teamMembers.map(member => (
-                <option key={member.id} value={member.id}>
+                <option key={`filter-${member.id}`} value={member.id}>
                   {member.name}
                 </option>
               ))}
@@ -749,7 +887,7 @@ export default function Projects() {
                   className="bg-secondary/60 border border-border rounded-lg px-2 py-1.5 text-xs text-foreground focus:outline-none focus:border-primary/50"
                 >
                   {VIEW_OPTIONS.map(opt => (
-                    <option key={opt} value={opt}>{opt}</option>
+                    <option key={`view-${opt}`} value={opt}>{opt}</option>
                   ))}
                 </select>
                 <select
@@ -758,17 +896,16 @@ export default function Projects() {
                   className="bg-secondary/60 border border-border rounded-lg px-2 py-1.5 text-xs text-foreground focus:outline-none focus:border-primary/50"
                 >
                   {SORT_OPTIONS.map(opt => (
-                    <option key={opt} value={opt}>Sort: {opt}</option>
+                    <option key={`sort-${opt}`} value={opt}>Sort: {opt}</option>
                   ))}
                 </select>
               </div>
             )}
           </div>
 
-          {/* Add Task Section - Both AI and Manual */}
+          {/* Add Task Section */}
           {showAddTask && (
             <div className="px-6 py-4 border-b border-border bg-card/20 animate-fade-in space-y-4">
-              {/* AI Input */}
               <div>
                 <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
                   <Sparkles className="w-3 h-3 text-cyan" />
@@ -777,11 +914,11 @@ export default function Projects() {
                 <NLPTaskInput
                   onTaskCreated={handleTaskCreated}
                   projectId={selectedProject.id}
+                  workspaceId={workspace?._id || workspace?.id}
                   onClose={() => setShowAddTask(false)}
                 />
               </div>
               
-              {/* Manual Task Form */}
               <div className="pt-4 border-t border-border">
                 <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
                   <Plus className="w-3 h-3" />
@@ -801,10 +938,10 @@ export default function Projects() {
                       onChange={(e) => setManualTaskPriority(e.target.value)}
                       className="bg-secondary/60 border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary/50"
                     >
-                      <option value="low">Low</option>
-                      <option value="medium">Medium</option>
-                      <option value="high">High</option>
-                      <option value="urgent">Urgent</option>
+                      <option key="priority-low" value="low">Low</option>
+                      <option key="priority-medium" value="medium">Medium</option>
+                      <option key="priority-high" value="high">High</option>
+                      <option key="priority-urgent" value="urgent">Urgent</option>
                     </select>
                   </div>
                   
@@ -830,9 +967,9 @@ export default function Projects() {
                       onChange={(e) => setManualTaskAssignee(e.target.value)}
                       className="flex-1 bg-secondary/60 border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary/50"
                     >
-                      <option value="">Unassigned</option>
+                      <option key="assign-none" value="">Unassigned</option>
                       {teamMembers.map(member => (
-                        <option key={member.id} value={member.id}>
+                        <option key={`assign-${member.id}`} value={member.id}>
                           {member.name}
                         </option>
                       ))}
@@ -884,7 +1021,7 @@ export default function Projects() {
                 {getFilteredAndSortedTasks(selectedProject.id).map((task, index) => {
                   const key = getTaskKey(task, index);
                   const taskId = getTaskId(task);
-                  const assignee = teamMembers.find(m => m.id === task.assignee_id);
+                  const assigneeInfo = getAssigneeInfo(task);
                   
                   return (
                     <div key={key} className="relative group">
@@ -892,9 +1029,8 @@ export default function Projects() {
                         task={task}
                         onUpdate={(id, updated) => handleTaskUpdate(id || taskId, updated)}
                       />
-                      {/* Assignment button - always visible on the right */}
                       <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                        {assignee ? (
+                        {assigneeInfo ? (
                           <button
                             onClick={() => {
                               setSelectedTaskForAssign(task);
@@ -903,11 +1039,11 @@ export default function Projects() {
                             className="flex items-center gap-1 px-2 py-1 rounded-lg bg-primary/10 border border-primary/20 text-xs text-primary hover:bg-primary/20 transition-colors"
                           >
                             <img 
-                              src={assignee.avatar} 
-                              alt={assignee.name} 
+                              src={assigneeInfo.avatar} 
+                              alt={assigneeInfo.name} 
                               className="w-5 h-5 rounded-full"
                             />
-                            <span className="hidden sm:inline">{assignee.name.split(' ')[0]}</span>
+                            <span className="hidden sm:inline">{assigneeInfo.name.split(' ')[0]}</span>
                           </button>
                         ) : (
                           <button
@@ -941,7 +1077,6 @@ export default function Projects() {
         </div>
       )}
 
-      {/* Assignment Modal */}
       {showAssignModal && <AssignModal />}
     </div>
   );

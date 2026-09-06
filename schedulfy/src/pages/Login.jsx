@@ -1,22 +1,37 @@
 // pages/Login.jsx
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/lib/AuthContext';
-import { Mail, Lock, Loader2, Sparkles,UserPlus } from 'lucide-react';
+import { Mail, Lock, Loader2, Sparkles, UserPlus, Eye, EyeOff } from 'lucide-react';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login, isAuthenticated } = useAuth();
+  const { login, isAuthenticated, setAuthToken, checkUserAuth } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const redirect = new URLSearchParams(location.search).get('redirect') || '/';
 
   useEffect(() => {
-    if (isAuthenticated) {
-      navigate('/');
+    const googleToken = new URLSearchParams(location.search).get('google_token');
+    const googleError = new URLSearchParams(location.search).get('google_error');
+    if (googleError) {
+      setError(googleError);
+      window.history.replaceState({}, document.title, '/login');
+      return;
     }
-  }, [isAuthenticated, navigate]);
+    if (googleToken) {
+      setAuthToken(googleToken);
+      checkUserAuth().then(() => navigate(redirect, { replace: true }));
+      return;
+    }
+    if (isAuthenticated) {
+      navigate(redirect);
+    }
+  }, [isAuthenticated, navigate, location.search, redirect, setAuthToken, checkUserAuth]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -26,7 +41,7 @@ export default function Login() {
     try {
       const result = await login(email, password);
       if (result.success) {
-        navigate('/');
+        navigate(redirect);
       } else {
         setError(result.error || 'Login failed');
       }
@@ -38,17 +53,13 @@ export default function Login() {
   };
 
   const handleGoogleLogin = () => {
-    // Implement Google login if available
-    alert('Google login coming soon!');
+    window.location.href = `/api/auth/google?redirect=${encodeURIComponent(redirect)}`;
   };
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex items-center justify-center bg-[#f0f2f5] px-4 py-10">
       {/* ── LEFT PANEL ── */}
-      <div
-        className="hidden lg:flex lg:w-5/12 xl:w-2/5 flex-col justify-between p-10 relative overflow-hidden"
-        style={{ background: 'linear-gradient(160deg, #0d1117 0%, #0f1729 50%, #111d3a 100%)' }}
-      >
+      <div className="hidden">
         {/* Background blobs */}
         <div className="absolute inset-0 w-full h-full opacity-30 pointer-events-none select-none">
           <div className="absolute top-[-20%] right-[-10%] w-96 h-96 rounded-full bg-primary/20 blur-3xl" />
@@ -71,25 +82,24 @@ export default function Login() {
       </div>
 
       {/* ── RIGHT PANEL ── */}
-      <div className="flex-1 flex items-center justify-center bg-[#f0f2f8] px-6 py-12">
-        <div className="w-full max-w-md">
-          {/* Mobile logo */}
-          <div className="flex items-center gap-2 mb-8 lg:hidden">
-            <Sparkles className="w-5 h-5 text-primary" />
-            <span className="font-display text-xl font-bold tracking-widest text-foreground">SCHEDULFY</span>
+      <div className="w-full max-w-[440px]">
+          <div className="text-center mb-6">
+            <div className="flex items-center justify-center gap-2 text-[#1877f2]">
+              <Sparkles className="w-7 h-7" />
+              <span className="font-display text-4xl font-bold tracking-wide">SCHEDULFY</span>
+            </div>
+            <p className="mt-2 text-base font-medium text-gray-700">Stay organized. Move forward.</p>
           </div>
 
-          {/* ✅ FIXED: Using glass with proper background */}
-          <div className="relative bg-white/80 backdrop-blur-xl rounded-2xl shadow-lg border border-white/20 p-8">
+          <div className="relative bg-white rounded-lg shadow-md border border-gray-200 p-5 sm:p-6">
             <div className="mb-7">
-              <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Welcome back</h1>
-              <p className="text-gray-500 text-sm mt-1">Log in to your Schedulfy account</p>
+              <h1 className="text-xl font-semibold text-gray-900 text-center">Log in to Schedulfy</h1>
             </div>
 
             {/* Google Button */}
             <button
               onClick={handleGoogleLogin}
-              className="w-full h-11 flex items-center justify-center gap-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors mb-5"
+              className="w-full h-11 flex items-center justify-center gap-2.5 border border-gray-300 rounded-md text-sm font-semibold text-gray-800 bg-white hover:bg-gray-50 transition-colors mb-5"
             >
               <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
@@ -105,21 +115,21 @@ export default function Login() {
                 <div className="w-full border-t border-gray-200" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-white px-3 text-gray-400 tracking-wider">or</span>
+                <span className="bg-white px-3 text-gray-600 font-semibold tracking-wider">or</span>
               </div>
             </div>
 
             {error && (
-              <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-100 text-red-600 text-sm">
+              <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm font-medium">
                 {error}
               </div>
             )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-1.5">
-                <label htmlFor="email" className="text-gray-700 text-sm font-medium">Email</label>
+                <label htmlFor="email" className="text-gray-900 text-sm font-semibold">Email</label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                   <input
                     id="email"
                     type="email"
@@ -128,7 +138,7 @@ export default function Login() {
                     placeholder="you@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-10 h-11 border border-gray-200 bg-gray-50 focus:bg-white rounded-xl text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-indigo-300 focus:ring-1 focus:ring-indigo-200 transition-all"
+                    className="w-full pl-10 h-12 border border-gray-300 bg-white focus:bg-white rounded-md text-gray-900 placeholder:text-gray-500 focus:outline-none focus:border-[#1877f2] focus:ring-2 focus:ring-blue-100 transition-all"
                     required
                   />
                 </div>
@@ -136,57 +146,55 @@ export default function Login() {
 
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <label htmlFor="password" className="text-gray-700 text-sm font-medium">Password</label>
-                  <Link to="/forgot-password" className="text-xs text-indigo-500 hover:text-indigo-600 hover:underline">
+                  <label htmlFor="password" className="text-gray-900 text-sm font-semibold">Password</label>
+                  <Link to="/forgot-password" className="text-xs text-indigo-700 font-medium hover:text-indigo-900 hover:underline">
                     Forgot password?
                   </Link>
                 </div>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                   <input
                     id="password"
-                    type="password"
+                    type={showPassword ? 'text' : 'password'}
                     autoComplete="current-password"
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-10 h-11 border border-gray-200 bg-gray-50 focus:bg-white rounded-xl text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-indigo-300 focus:ring-1 focus:ring-indigo-200 transition-all"
+                    className="w-full pl-10 pr-11 h-12 border border-gray-300 bg-white focus:bg-white rounded-md text-gray-900 placeholder:text-gray-500 focus:outline-none focus:border-[#1877f2] focus:ring-2 focus:ring-blue-100 transition-all"
                     required
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((visible) => !visible)}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-900"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
                 </div>
               </div>
 
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full h-11 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition-colors disabled:opacity-60 flex items-center justify-center gap-2 mt-1"
+                className="w-full h-12 rounded-md bg-[#1877f2] hover:bg-[#166fe5] text-white text-base font-bold transition-colors disabled:opacity-60 flex items-center justify-center gap-2 mt-1"
               >
                 {loading ? (
                   <><Loader2 className="w-4 h-4 animate-spin" /> Logging in...</>
                 ) : (
-                  "Log in"
+                  <><Lock className="w-4 h-4" /> Log in</>
                 )}
               </button>
             </form>
 
-            {/* Login Button - Prominent */}
-            <div className="mt-6 pt-6 border-t border-gray-100">
-              <Link to="/register">
-                <button className="w-full h-11 rounded-xl border-2 border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-sm font-semibold transition-colors flex items-center justify-center gap-2">
-                  <UserPlus className="w-4 h-4" />
-                  Don't have an account? Sign up
-                </button>
-              </Link>
-            </div>
           </div>
 
-          <p className="text-center text-sm text-gray-500 mt-5">
+          <p className="text-center text-sm font-medium text-gray-700 mt-5">
             Don't have an account?{" "}
-            <Link to="/register" className="text-indigo-500 font-medium hover:underline">
+            <Link to="/register" className="text-[#1877f2] font-semibold hover:text-[#166fe5] hover:underline">
               Create one
             </Link>
           </p>
-        </div>
       </div>
     </div>
   );

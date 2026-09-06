@@ -83,9 +83,18 @@ export default function Team() {
       if (response.ok) {
         const data = await response.json();
         if (data && data.length > 0) {
-          setWorkspace(data[0]);
-          if (data[0].members) {
-            setMembers(data[0].members);
+          const workspaceData = data[0];
+          const detailsResponse = await fetch(`/api/workspace/${workspaceData.id}`, {
+            headers: { 'Authorization': `Bearer ${token}` },
+          });
+          const details = detailsResponse.ok ? await detailsResponse.json() : workspaceData;
+          setWorkspace(details);
+          if (details.members) {
+            setMembers(details.members.map((member) => ({
+              ...member,
+              id: member._id || member.id,
+              full_name: member.full_name || member.name,
+            })));
           }
         }
       }
@@ -211,9 +220,9 @@ export default function Team() {
       }, 3000);
 
     } catch (error) {
-      console.error('❌ Error sending invitation:', error);
+      console.error(' Error sending invitation:', error);
       setInviteSuccess(false);
-      setInviteMessage(`❌ ${error.message || 'Failed to send invitation. Please try again.'}`);
+      setInviteMessage(` ${error.message || 'Failed to send invitation. Please try again.'}`);
     } finally {
       setInviting(false);
     }
@@ -224,14 +233,14 @@ export default function Team() {
     const inviteLink = `${window.location.origin}/accept-invite?code=${workspace.invite_code}`;
     try {
       await navigator.clipboard.writeText(inviteLink);
-      setInviteMessage('✅ Invite link copied to clipboard!');
+      setInviteMessage(' Invite link copied to clipboard!');
       setInviteSuccess(true);
       setTimeout(() => {
         setInviteMessage('');
         setInviteSuccess(null);
       }, 3000);
     } catch (error) {
-      setInviteMessage('❌ Failed to copy link. Please copy it manually.');
+      setInviteMessage('Failed to copy link. Please copy it manually.');
       setInviteSuccess(false);
     }
   };

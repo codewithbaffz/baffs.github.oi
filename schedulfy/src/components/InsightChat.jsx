@@ -2,19 +2,25 @@
 import React, { useState } from 'react';
 import { Bot, Send, X, MessageCircle, AlertCircle } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import { useAuth } from '@/lib/AuthContext';
 
 const InsightChat = ({ tasks, sessions, onClose }) => {
+  const { user, isAuthenticated } = useAuth();
   const [isOpen, setIsOpen] = useState(true);
   const [messages, setMessages] = useState([
     { 
       id: 1, 
       sender: 'ai', 
-      text: '👋 Hello! I can help you analyze your productivity data. What would you like to know?' 
+      text: isAuthenticated 
+        ? '👋 Hello! I can help you analyze your productivity data. What would you like to know?' 
+        : '👋 Please login to use the AI assistant. Once logged in, I can help you manage your tasks!'
     }
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [apiError, setApiError] = useState(null);
+
+  const API_URL = import.meta.env.VITE_API_URL || '/api';
 
   const getTaskStats = () => {
     const total = tasks?.length || 0;
@@ -27,74 +33,98 @@ const InsightChat = ({ tasks, sessions, onClose }) => {
     return { total, completed, inProgress, todo, completionRate, sessionCount };
   };
 
-  const sendToGroq = async (userMessage) => {
-    const apiKey = import.meta.env.VITE_GROQ_API_KEY;
-    
-    // Check if API key exists
-    if (!apiKey) {
-      throw new Error('Sorry Server is done.Issue will be resolved soon');
-    }
-
-    // Check if API key is valid format
-    if (!apiKey.startsWith('gsk_')) {
-      throw new Error('Invalid Groq API key format. It should start with "gsk_"');
-    }
-
-    const stats = getTaskStats();
-    
+  const sendToAI = async (userMessage) => {
     try {
-      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      // ✅ FIXED: Use 'authToken' (matches your AuthContext)
+      const token = localStorage.getItem('authToken');
+      
+      if (!token) {
+        throw new Error('Please login to use the AI assistant.');
+      }
+
+      const stats = getTaskStats();
+      
+      const context = {
+        tasks: tasks || [],
+        user: user,
+        stats: stats,
+      };
+
+      const response = await fetch(`${API_URL}/ai/command`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
-          model: 'openai/gpt-oss-120b',
-          messages: [
-            {
-              role: 'system',
-              content: `You are a friendly productivity assistant analyzing a user's task data.
-                        Current stats:
-                        - Total tasks: ${stats.total}
-                        - Completed: ${stats.completed}
-                        - In Progress: ${stats.inProgress}
-                        - To Do: ${stats.todo}
-                        - Completion Rate: ${stats.completionRate}%
-                        - Focus Sessions: ${stats.sessionCount}
-                        
-                        Give concise, encouraging, and actionable insights. Keep responses under 100 words.
-                        Be supportive and practical.`
-            },
-            {
-              role: 'user',
-              content: userMessage
-            }
-          ],
-          temperature: 1,
-          max_tokens: 300,
-        })
+          command: userMessage,
+          context: context,
+        }),
       });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        console.error('Groq API Error Details:', errorData);
+        console.error('AI API Error Details:', errorData);
         
         if (response.status === 401) {
-          throw new Error('Invalid Groq API key. Please check your VITE_GROQ_API_KEY in .env file.');
+          localStorage.removeItem('authToken');
+          throw new Error('Session expired. Please login again.');
         } else if (response.status === 429) {
           throw new Error('Rate limit exceeded. Please wait a moment before trying again.');
-        } else if (response.status === 403) {
-          throw new Error('API key does not have permission. Please check your Groq account.');
         } else {
-          throw new Error(`API Error: ${response.status} - ${errorData.error?.message || 'Unknown error'}`);
+          throw new Error(errorData.message || `Server Error: ${response.status}`);
         }
       }
 
-      const data = await response.json();
-      return data.choices[0]?.message?.content || 'I couldn\'t process that request. Please try again.';
+      const action = await response.json();
+
+      if (action.type === 'error') {
+        throw new Error(action.message || 'I had trouble processing that.');
+      }
+
+      if (action.type === 'query') {
+        let resultMessage = action.message || 'Query completed';
+        if (action.data?.tasks?.length > 0) {
+          const taskList = action.data.tasks.map((t, i) => 
+            `${i + 1}. ${t.title} (${t.status || 'todo'})`
+          ).join('\n');
+          resultMessage += `\n\n${taskList}`;
+        }
+        return resultMessage;
+      }
+
+      if (action.type === 'create' || action.type === 'update') {
+        const executeResponse = await fetch(`${API_URL}/ai/execute`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({ action }),
+        });
+
+        if (!executeResponse.ok) {
+          const errorData = await executeResponse.json();
+          throw new Error(errorData.message || 'Failed to execute action');
+        }
+
+        const result = await executeResponse.json();
+        
+        if (result.success) {
+          return `✅ ${result.message || 'Action completed successfully!'}`;
+        } else {
+          throw new Error(result.message || 'Failed to execute action');
+        }
+      }
+
+      if (action.requiresConfirmation) {
+        return `⚠️ ${action.message}\n\nPlease type "confirm" to proceed with this action.`;
+      }
+
+      return action.message || 'Action processed successfully!';
+
     } catch (error) {
-      console.error('Groq API Error:', error);
+      console.error('AI Error:', error);
       throw error;
     }
   };
@@ -110,20 +140,21 @@ const InsightChat = ({ tasks, sessions, onClose }) => {
     setApiError(null);
 
     try {
-      const aiResponse = await sendToGroq(userMessage);
+      const aiResponse = await sendToAI(userMessage);
       setMessages(prev => [...prev, { id: Date.now() + 1, sender: 'ai', text: aiResponse }]);
     } catch (error) {
-      console.error('Error sending to Groq:', error);
+      console.error('Error sending to AI:', error);
       setApiError(error.message);
       
-      // Fallback responses based on the error
       let fallbackText = '';
-      if (error.message.includes('API key')) {
-        fallbackText = ' API key issue. Please check your Groq API key in the .env file.';
+      if (error.message.includes('login') || error.message.includes('Session expired')) {
+        fallbackText = '🔒 Please login again to use the AI assistant.';
       } else if (error.message.includes('Rate limit')) {
-        fallbackText = ' Too many requests. Please wait a moment before trying again.';
+        fallbackText = '⏳ Too many requests. Please wait a moment before trying again.';
+      } else if (error.message.includes('confirm')) {
+        fallbackText = error.message;
       } else {
-        fallbackText = ` Based on your data: You have ${getTaskStats().total} tasks with a ${getTaskStats().completionRate}% completion rate. Keep up the great work!`;
+        fallbackText = `I couldn't reach the AI service right now. ${error.message || 'Please try again in a moment.'}`;
       }
       
       setMessages(prev => [...prev, { 
@@ -133,6 +164,13 @@ const InsightChat = ({ tasks, sessions, onClose }) => {
       }]);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleSend();
     }
   };
 
@@ -154,6 +192,11 @@ const InsightChat = ({ tasks, sessions, onClose }) => {
         <div className="flex items-center gap-2">
           <Bot className="w-5 h-5 text-primary" />
           <h3 className="font-heading text-sm font-bold">AI Insights Assistant</h3>
+          {!isAuthenticated && (
+            <span className="text-xs text-yellow-500 bg-yellow-500/10 px-2 py-0.5 rounded-full">
+              Login Required
+            </span>
+          )}
         </div>
         <button 
           onClick={() => setIsOpen(false)}
@@ -204,18 +247,24 @@ const InsightChat = ({ tasks, sessions, onClose }) => {
             type="text"
             value={input}
             onChange={e => setInput(e.target.value)}
-            onKeyPress={e => e.key === 'Enter' && handleSend()}
-            placeholder="Ask about your productivity..."
-            className="flex-1 px-3 py-2 bg-secondary/60 border border-border rounded-lg text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary/50"
+            onKeyPress={handleKeyPress}
+            placeholder={isAuthenticated ? "Ask about your productivity..." : "Login to use the AI assistant"}
+            disabled={!isAuthenticated}
+            className="flex-1 px-3 py-2 bg-secondary/60 border border-border rounded-lg text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary/50 disabled:opacity-50 disabled:cursor-not-allowed"
           />
           <button 
             onClick={handleSend}
-            disabled={!input.trim() || isLoading}
+            disabled={!input.trim() || isLoading || !isAuthenticated}
             className="px-3 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors"
           >
             <Send className="w-4 h-4" />
           </button>
         </div>
+        {!isAuthenticated && (
+          <p className="text-xs text-muted-foreground mt-2 text-center">
+            Please <a href="/login" className="text-primary hover:underline">login</a> to use the AI assistant
+          </p>
+        )}
       </div>
     </div>
   );

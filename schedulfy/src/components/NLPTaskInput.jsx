@@ -52,9 +52,7 @@ Return ONLY valid JSON.`,
 
   const handleConfirm = async () => {
     setSaving(true);
-    // eslint-disable-next-line unused-imports/no-unused-vars
-    const user = await base44.auth.me();
-    const task = await base44.entities.Task.create({
+    const task = {
       title: parsed.title,
       description: parsed.description || '',
       due_date: parsed.due_date || null,
@@ -66,7 +64,7 @@ Return ONLY valid JSON.`,
       source: 'nlp',
       project_id: projectId || null,
       workspace_id: workspaceId || null,
-    });
+    };
     setSaving(false);
     setParsed(null);
     setInput('');

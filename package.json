@@ -19,7 +19,6 @@
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.7.4",
-    "nodemailer": "^9.0.4",
     "react-markdown": "^10.1.0"
   },
   "devDependencies": {

@@ -40,6 +40,26 @@ const taskSchema = new mongoose.Schema({
     ref: 'User',
     required: true,
   },
+  workspace_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Workspace',
+  },
+  project_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Project',
+  },
+  assignee_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+  },
+  assignee_name: {
+    type: String,
+    default: null,
+  },
+  assignee_avatar: {
+    type: String,
+    default: null,
+  },
   created_at: {
     type: Date,
     default: Date.now,

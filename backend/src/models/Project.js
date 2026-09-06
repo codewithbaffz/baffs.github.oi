@@ -28,6 +28,10 @@ const projectSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  workspace_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Workspace',
+  },
   created_at: {
     type: Date,
     default: Date.now,

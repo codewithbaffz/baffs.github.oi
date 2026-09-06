@@ -1,10 +1,6 @@
 /* eslint-disable unused-imports/no-unused-imports, unused-imports/no-unused-vars */
 import { useEffect, useState } from 'react';
-import { schedulfy } from '@/api/schedulfyClient';
 import { Bell, Zap, AlertTriangle, MessageSquare, UserPlus, CheckSquare, X } from 'lucide-react';
-
-/** @type {any} */
-const _sched = schedulfy;
 import { formatDistanceToNow } from 'date-fns';
 
 const TYPE_CONFIG = {
@@ -15,6 +11,8 @@ const TYPE_CONFIG = {
   mention: { icon: MessageSquare, color: 'text-cyan', bg: 'bg-cyan/10' },
   assignment: { icon: UserPlus, color: 'text-primary', bg: 'bg-primary/10' },
   team_update: { icon: UserPlus, color: 'text-green-400', bg: 'bg-green-400/10' },
+  project_update: { icon: Bell, color: 'text-cyan', bg: 'bg-cyan/10' },
+  task_update: { icon: CheckSquare, color: 'text-green-400', bg: 'bg-green-400/10' },
   ai_suggestion: { icon: Zap, color: 'text-cyan', bg: 'bg-cyan/10' },
 };
 
@@ -27,14 +25,12 @@ export default function NotificationPanel({ onClose }) {
   }, []);
 
   const loadNotifications = async () => {
-    // placeholder: schedulfy may not be wired yet
     try {
-    const user = await _sched.auth.me();
-    const data = await _sched.entities.Notification.filter(
-        { user_id: user.id },
-        '-created_date',
-        30
-      );
+      const response = await fetch('/api/notifications', {
+        headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` },
+      });
+      if (!response.ok) throw new Error('Failed to load notifications');
+      const data = await response.json();
       setNotifications(data);
     } catch {
       setNotifications([]);
@@ -43,11 +39,11 @@ export default function NotificationPanel({ onClose }) {
   };
 
   const markAllRead = async () => {
-    const unread = notifications.filter((n) => !n.is_read);
     try {
-      await Promise.all(
-        unread.map((n) => _sched.entities.Notification.update(n.id, { is_read: true }))
-      );
+      await fetch('/api/notifications/read-all', {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` },
+      });
       setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
     } catch {
       // ignore
@@ -56,7 +52,10 @@ export default function NotificationPanel({ onClose }) {
 
   const markRead = async (id) => {
     try {
-      await _sched.entities.Notification.update(id, { is_read: true });
+      await fetch(`/api/notifications/${id}/read`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` },
+      });
       setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, is_read: true } : n)));
     } catch {
       // ignore
@@ -102,7 +101,7 @@ export default function NotificationPanel({ onClose }) {
                 const Icon = config.icon;
                 return (
                   <div
-                    key={notif.id}
+                    key={notif.id || notif._id}
                     onClick={() => markRead(notif.id)}
                     className={`flex gap-3 p-3 rounded-lg cursor-pointer transition-all ${notif.is_read ? 'opacity-60' : 'bg-secondary/50'} hover:bg-secondary`}
                   >
@@ -116,8 +115,11 @@ export default function NotificationPanel({ onClose }) {
                       <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
                         {notif.message}
                       </p>
+                      {notif.actor_name && notif.actor_name !== 'A team member' && (
+                        <p className="text-[11px] text-primary/80 mt-1">By {notif.actor_name}</p>
+                      )}
                       <p className="text-xs text-muted-foreground/60 mt-1">
-                        {formatDistanceToNow(new Date(notif.created_date), { addSuffix: true })}
+                        {formatDistanceToNow(new Date(notif.created_date || notif.created_at), { addSuffix: true })}
                       </p>
                     </div>
                     {!notif.is_read && (

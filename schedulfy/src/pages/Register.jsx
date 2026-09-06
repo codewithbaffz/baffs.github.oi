@@ -1,6 +1,6 @@
 // pages/Register.jsx
 import React, { useState, useRef } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/AuthContext";
 import { Mail, Lock, Loader2, UserPlus, User } from "lucide-react"; // ✅ Added User icon
 import AuthLayout from "@/components/AuthLayout";
@@ -91,6 +91,8 @@ export default function Register() {
   const [showOtp, setShowOtp] = useState(false);
   const [otpCode, setOtpCode] = useState("");
   const navigate = useNavigate();
+  const location = useLocation();
+  const redirect = new URLSearchParams(location.search).get('redirect') || '/';
   const { checkUserAuth } = useAuth();
 
   const handleSubmit = async (e) => {
@@ -128,7 +130,7 @@ export default function Register() {
       if (response.token) {
         localStorage.setItem('authToken', response.token);
         await checkUserAuth();
-        navigate("/");
+        navigate(redirect);
       } else if (response.requiresVerification || response.message?.includes('verify')) {
         setShowOtp(true);
       } else {
@@ -159,7 +161,7 @@ export default function Register() {
       if (result?.access_token || result?.token) {
         localStorage.setItem('authToken', result.token || result.access_token);
         await checkUserAuth();
-        navigate("/");
+        navigate(redirect);
       } else {
         setError("Verification successful but no token received");
       }
