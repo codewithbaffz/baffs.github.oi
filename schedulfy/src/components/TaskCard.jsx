@@ -43,11 +43,11 @@ export default function TaskCard({ task, onUpdate, onDelete, onClick, compact = 
     setCompleting(true);
     const newStatus = isDone ? 'todo' : 'done';
     
-    // ✅ Get the task ID correctly
+    //  Get the task ID correctly
     const taskId = task.id || task._id || task.task_id;
     
-    console.log('📤 Toggle Done - Task ID:', taskId);
-    console.log('📤 Toggle Done - Task:', task);
+    console.log(' Toggle Done - Task ID:', taskId);
+    console.log(' Toggle Done - Task:', task);
     
     const updated = { 
       ...task,
@@ -56,10 +56,10 @@ export default function TaskCard({ task, onUpdate, onDelete, onClick, compact = 
     };
     
     try {
-      // ✅ Call onUpdate with both ID and the updated task
+      //  Call onUpdate with both ID and the updated task
       await onUpdate?.(taskId, updated);
     } catch (error) {
-      console.error('❌ Failed to update task:', error);
+      console.error(' Failed to update task:', error);
     } finally {
       setCompleting(false);
     }

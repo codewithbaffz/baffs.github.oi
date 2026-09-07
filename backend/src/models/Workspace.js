@@ -22,6 +22,20 @@ const workspaceSchema = new mongoose.Schema({
   member_ids: [{
     type: String,
   }],
+  visibility: {
+    tasks: {
+      type: Boolean,
+      default: true,
+    },
+    projects: {
+      type: Boolean,
+      default: true,
+    },
+    members: {
+      type: Boolean,
+      default: true,
+    },
+  },
   invitations: [{
     email: {
       type: String,

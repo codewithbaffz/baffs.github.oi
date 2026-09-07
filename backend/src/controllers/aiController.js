@@ -9,13 +9,13 @@ export const processAICommand = async (req, res) => {
   try {
     const { command, context } = req.body;
     
-    // ✅ Try multiple ways to get userId
+    //  Try multiple ways to get userId
     const userId = req.userId || req.user?.id || req.user?.userId;
     
-    console.log('🤖 AI Command received:', command);
-    console.log('👤 User ID from request:', userId);
-    console.log('👤 Full req.user:', req.user);
-    console.log('👤 Full req.userId:', req.userId);
+    console.log(' AI Command received:', command);
+    console.log(' User ID from request:', userId);
+    console.log(' Full req.user:', req.user);
+    console.log(' Full req.userId:', req.userId);
 
     if (!command) {
       return res.status(400).json({
@@ -25,7 +25,7 @@ export const processAICommand = async (req, res) => {
     }
 
     if (!userId) {
-      console.log('❌ No user ID found in request');
+      console.log(' No user ID found in request');
       return res.status(401).json({
         type: 'error',
         message: 'Authentication required. Please login again.',
@@ -34,7 +34,7 @@ export const processAICommand = async (req, res) => {
 
     // Get user from database
     const user = await User.findById(userId);
-    console.log('👤 User found:', user ? 'Yes' : 'No');
+    console.log(' User found:', user ? 'Yes' : 'No');
     
     if (!user) {
       return res.status(404).json({
@@ -43,15 +43,17 @@ export const processAICommand = async (req, res) => {
       });
     }
 
-    const workspaces = await Workspace.find({ member_ids: userId }).select('_id');
+    const workspaces = await Workspace.find({ member_ids: userId }).select('_id admin_id visibility');
+    const visibleWorkspaceIds = workspaces
+      .filter((workspace) => workspace.admin_id === userId || workspace.visibility?.tasks !== false)
+      .map((workspace) => workspace._id);
     const tasks = await Task.find({
       $or: [
         { user_id: userId },
-        { assignee_id: userId },
-        { workspace_id: { $in: workspaces.map((workspace) => workspace._id) } },
+        { workspace_id: { $in: visibleWorkspaceIds } },
       ],
     }).sort({ created_at: -1 }).lean();
-    console.log('📋 Tasks found:', tasks.length);
+    console.log(' Tasks found:', tasks.length);
 
     const response = await groqService.processCommand(command, {
       tasks,
@@ -65,8 +67,8 @@ export const processAICommand = async (req, res) => {
       requiresConfirmation: response.requiresConfirmation || response.intent === 'delete',
     });
   } catch (error) {
-    console.error('❌ AI processing error:', error);
-    console.error('❌ Stack:', error.stack);
+    console.error(' AI processing error:', error);
+    console.error(' Stack:', error.stack);
     res.status(502).json({
       type: 'error',
       message: error.message || 'The AI service could not process that request. Please try again.',
@@ -81,8 +83,8 @@ export const executeAIAction = async (req, res) => {
     const { action } = req.body;
     const userId = req.userId || req.user?.id || req.user?.userId;
 
-    console.log('⚡ Executing action:', action.type);
-    console.log('👤 User ID:', userId);
+    console.log(' Executing action:', action.type);
+    console.log(' User ID:', userId);
 
     if (!userId) {
       return res.status(401).json({
@@ -112,7 +114,7 @@ export const executeAIAction = async (req, res) => {
 
     res.json(result);
   } catch (error) {
-    console.error('❌ Action execution error:', error);
+    console.error(' Action execution error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to execute action',
@@ -126,7 +128,7 @@ async function processCommand(command, context) {
   const { tasks, user } = context;
   const commandLower = command.toLowerCase();
 
-  console.log('🔍 Processing command:', commandLower);
+  console.log(' Processing command:', commandLower);
 
   // Check for task creation
   if (commandLower.includes('create') || commandLower.includes('new task') || commandLower.includes('add task')) {
@@ -194,7 +196,7 @@ async function processCommand(command, context) {
   return {
     type: 'query',
     data: { tasks },
-    message: `👋 Hello! I can help you manage your tasks. You have ${tasks.length} tasks. Try saying "create a new task" or "show my tasks".`,
+    message: ` Hello! I can help you manage your tasks. You have ${tasks.length} tasks. Try saying "create a new task" or "show my tasks".`,
     requiresConfirmation: false,
   };
 }
@@ -316,7 +318,7 @@ async function queryTasks(data, userId) {
       success: true,
       tasks: filtered,
       count: filtered.length,
-      message: `🔍 Found ${filtered.length} task(s) matching your query`,
+      message: ` Found ${filtered.length} task(s) matching your query`,
     };
   } catch (error) {
     console.error('Query tasks error:', error);

@@ -10,12 +10,13 @@ const router = express.Router();
 router.get('/', authenticate, async (req, res) => {
   try {
     console.log(' Fetching tasks for user:', req.userId);
-    const workspaces = await Workspace.find({ member_ids: req.userId }).select('_id');
-    const workspaceIds = workspaces.map((workspace) => workspace._id);
+    const workspaces = await Workspace.find({ member_ids: req.userId }).select('_id admin_id visibility');
+    const workspaceIds = workspaces
+      .filter((workspace) => workspace.admin_id === req.userId || workspace.visibility?.tasks !== false)
+      .map((workspace) => workspace._id);
     const tasks = await Task.find({
       $or: [
         { user_id: req.userId },
-        { assignee_id: req.userId },
         { workspace_id: { $in: workspaceIds } },
       ],
     }).sort({ created_at: -1 });
@@ -37,6 +38,9 @@ router.post('/', authenticate, async (req, res) => {
     if (workspaceId) {
       workspace = await Workspace.findOne({ _id: workspaceId, member_ids: req.userId });
       if (!workspace) return res.status(403).json({ error: 'You are not a member of this workspace' });
+      if (workspace.admin_id !== req.userId && workspace.visibility?.tasks === false) {
+        return res.status(403).json({ error: 'The workspace admin has disabled shared tasks' });
+      }
       if (assigneeId && !workspace.member_ids.includes(assigneeId)) {
         return res.status(400).json({ error: 'Assignee must be a workspace member' });
       }
@@ -89,9 +93,15 @@ router.put('/:id', authenticate, async (req, res) => {
     
     const existingTask = await Task.findOne({ _id: req.params.id });
     if (!existingTask) return res.status(404).json({ error: 'Task not found' });
+    const taskUpdates = { ...req.body };
+    delete taskUpdates.user_id;
     if (existingTask.workspace_id) {
+      delete taskUpdates.workspace_id;
       const workspace = await Workspace.findOne({ _id: existingTask.workspace_id, member_ids: req.userId });
       if (!workspace) return res.status(403).json({ error: 'You are not a workspace member' });
+      if (workspace.admin_id !== req.userId && workspace.visibility?.tasks === false) {
+        return res.status(403).json({ error: 'The workspace admin has disabled shared tasks' });
+      }
       if (req.body.assignee_id && !workspace.member_ids.includes(req.body.assignee_id)) {
         return res.status(400).json({ error: 'Assignee must be a workspace member' });
       }
@@ -110,7 +120,7 @@ router.put('/:id', authenticate, async (req, res) => {
 
     const task = await Task.findOneAndUpdate(
       { _id: req.params.id },
-      { ...req.body, updated_at: new Date() },
+      { ...taskUpdates, updated_at: new Date() },
       { new: true, runValidators: true }
     );
     

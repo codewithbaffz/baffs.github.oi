@@ -10,24 +10,21 @@ const router = express.Router();
 // Get all projects for the current user
 router.get('/', authenticate, async (req, res) => {
   try {
-    console.log('📋 Fetching projects for user:', req.userId);
-    const workspaces = await Workspace.find({ member_ids: req.userId }).select('_id');
-    if (workspaces.length > 0) {
-      await Project.updateMany(
-        { user_id: req.userId, workspace_id: { $exists: false } },
-        { $set: { workspace_id: workspaces[0]._id } }
-      );
-    }
+    console.log(' Fetching projects for user:', req.userId);
+    const workspaces = await Workspace.find({ member_ids: req.userId }).select('_id admin_id visibility');
+    const visibleWorkspaceIds = workspaces
+      .filter((workspace) => workspace.admin_id === req.userId || workspace.visibility?.projects !== false)
+      .map((workspace) => workspace._id);
     const projects = await Project.find({
       $or: [
         { user_id: req.userId },
-        { workspace_id: { $in: workspaces.map((workspace) => workspace._id) } },
+        { workspace_id: { $in: visibleWorkspaceIds } },
       ],
     });
-    console.log(`✅ Found ${projects.length} projects`);
+    console.log(` Found ${projects.length} projects`);
     res.json(projects);
   } catch (error) {
-    console.error('❌ Error fetching projects:', error);
+    console.error(' Error fetching projects:', error);
     res.status(500).json({ message: error.message });
   }
 });
@@ -35,10 +32,13 @@ router.get('/', authenticate, async (req, res) => {
 // Create a new project
 router.post('/', authenticate, async (req, res) => {
   try {
-    console.log('📝 Creating project for user:', req.userId);
-    console.log('📦 Project data:', req.body);
+    console.log(' Creating project for user:', req.userId);
+    console.log(' Project data:', req.body);
     
-    const workspace = await Workspace.findOne({ member_ids: req.userId }).select('_id');
+    const workspace = await Workspace.findOne({ member_ids: req.userId }).select('_id admin_id visibility');
+    if (workspace && workspace.admin_id !== req.userId && workspace.visibility?.projects === false) {
+      return res.status(403).json({ message: 'The workspace admin has disabled shared projects' });
+    }
     const project = new Project({
       name: req.body.name,
       description: req.body.description || '',
@@ -61,10 +61,10 @@ router.post('/', authenticate, async (req, res) => {
       });
     }
     
-    console.log('✅ Project created:', project._id);
+    console.log(' Project created:', project._id);
     res.status(201).json(project);
   } catch (error) {
-    console.error('❌ Error creating project:', error);
+    console.error(' Error creating project:', error);
     res.status(400).json({ message: error.message });
   }
 });
@@ -72,19 +72,25 @@ router.post('/', authenticate, async (req, res) => {
 // Update a project
 router.patch('/:id', authenticate, async (req, res) => {
   try {
-    console.log(`📝 Updating project ${req.params.id} for user:`, req.userId);
-    console.log('📦 Update data:', req.body);
+    console.log(` Updating project ${req.params.id} for user:`, req.userId);
+    console.log(' Update data:', req.body);
+    const projectUpdates = {};
+    ['name', 'description', 'color', 'status', 'due_date'].forEach((key) => {
+      if (req.body?.[key] !== undefined) projectUpdates[key] = req.body[key];
+    });
     
-    const workspace = await Workspace.findOne({ member_ids: req.userId }).select('_id');
+    const workspace = await Workspace.findOne({ member_ids: req.userId }).select('_id admin_id visibility');
     const project = await Project.findOneAndUpdate(
       {
         _id: req.params.id,
         $or: [
           { user_id: req.userId },
-          ...(workspace ? [{ workspace_id: workspace._id }] : []),
+          ...(workspace && (workspace.admin_id === req.userId || workspace.visibility?.projects !== false)
+            ? [{ workspace_id: workspace._id }]
+            : []),
         ],
       },
-      req.body,
+      projectUpdates,
       { new: true, runValidators: true }
     );
     
@@ -104,10 +110,10 @@ router.patch('/:id', authenticate, async (req, res) => {
       });
     }
     
-    console.log('✅ Project updated:', project._id);
+    console.log(' Project updated:', project._id);
     res.json(project);
   } catch (error) {
-    console.error('❌ Error updating project:', error);
+    console.error(' Error updating project:', error);
     res.status(400).json({ message: error.message });
   }
 });
@@ -115,7 +121,7 @@ router.patch('/:id', authenticate, async (req, res) => {
 // Delete a project
 router.delete('/:id', authenticate, async (req, res) => {
   try {
-    console.log(`🗑️ Deleting project ${req.params.id} for user:`, req.userId);
+    console.log(` Deleting project ${req.params.id} for user:`, req.userId);
     
     const project = await Project.findOneAndDelete({ _id: req.params.id, user_id: req.userId });
     
@@ -123,10 +129,10 @@ router.delete('/:id', authenticate, async (req, res) => {
       return res.status(404).json({ message: 'Project not found' });
     }
     
-    console.log('✅ Project deleted:', project._id);
+    console.log(' Project deleted:', project._id);
     res.json({ message: 'Project deleted successfully' });
   } catch (error) {
-    console.error('❌ Error deleting project:', error);
+    console.error(' Error deleting project:', error);
     res.status(500).json({ message: error.message });
   }
 });

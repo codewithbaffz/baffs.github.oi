@@ -2,7 +2,7 @@
 import React, { useState, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/AuthContext";
-import { Mail, Lock, Loader2, UserPlus, User } from "lucide-react"; // ✅ Added User icon
+import { Mail, Lock, Loader2, UserPlus, User, Eye, EyeOff } from "lucide-react";
 import AuthLayout from "@/components/AuthLayout";
 import schedulfySDK from "@/lib/sdk";
 
@@ -82,10 +82,12 @@ const InputOTP = ({ value, onChange }) => {
 };
 
 export default function Register() {
-  const [name, setName] = useState(""); // ✅ Added name
+  const [name, setName] = useState(""); //  Added name
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showOtp, setShowOtp] = useState(false);
@@ -99,7 +101,7 @@ export default function Register() {
     e.preventDefault();
     setError("");
     
-    // ✅ Validate name
+    //  Validate name
     if (!name.trim()) {
       setError("Full name is required");
       return;
@@ -119,7 +121,7 @@ export default function Register() {
     try {
       console.log('Registering user:', { name, email });
       
-      // ✅ Send name, email, and password
+      //  Send name, email, and password
       const response = await schedulfySDK.auth.register({ 
         name: name.trim(),
         email, 
@@ -272,7 +274,7 @@ export default function Register() {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* ✅ Name Field - Added */}
+        {/*  Name Field - Added */}
         <div className="space-y-2">
           <label className="text-sm font-medium text-foreground">Full Name</label>
           <div className="relative">
@@ -311,7 +313,7 @@ export default function Register() {
           <div className="relative">
             <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <input
-              type="password"
+              type={showPassword ? 'text' : 'password'}
               autoComplete="new-password"
               placeholder="••••••••"
               value={password}
@@ -320,6 +322,14 @@ export default function Register() {
               required
               minLength={8}
             />
+            <button
+              type="button"
+              onClick={() => setShowPassword((visible) => !visible)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+            >
+              {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
           </div>
         </div>
 
@@ -328,7 +338,7 @@ export default function Register() {
           <div className="relative">
             <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <input
-              type="password"
+              type={showConfirmPassword ? 'text' : 'password'}
               autoComplete="new-password"
               placeholder="••••••••"
               value={confirmPassword}
@@ -337,6 +347,14 @@ export default function Register() {
               required
               minLength={8}
             />
+            <button
+              type="button"
+              onClick={() => setShowConfirmPassword((visible) => !visible)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
+              aria-label={showConfirmPassword ? 'Hide confirmation password' : 'Show confirmation password'}
+            >
+              {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
           </div>
         </div>
 

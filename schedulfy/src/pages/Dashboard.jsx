@@ -64,7 +64,7 @@ export default function Dashboard() {
     { id: 'demo-5', title: 'Fix navigation bug', status: 'todo', due_date: new Date(Date.now() - 172800000).toISOString(), priority: 'urgent' },
   ];
 
-  // ✅ Use useMemo to ensure derived data updates when tasks change
+  //  Use useMemo to ensure derived data updates when tasks change
   const displayTasks = useMemo(() => {
     return tasks && tasks.length > 0 ? tasks : demoTasks;
   }, [tasks]);
@@ -102,18 +102,18 @@ export default function Dashboard() {
         taskId = taskData._id || taskData.id || taskData.task_id;
       }
       
-      console.log('📤 Dashboard Update - ID:', taskId);
-      console.log('📤 Dashboard Update - Data:', taskData);
+      console.log(' Dashboard Update - ID:', taskId);
+      console.log(' Dashboard Update - Data:', taskData);
       
       if (taskId) {
         const result = await updateTask(taskId, taskData);
         if (result.success) {
-          console.log('✅ Task updated successfully');
-          // ✅ Force a refresh to ensure UI updates
+          console.log(' Task updated successfully');
+          //  Force a refresh to ensure UI updates
           await fetchTasks();
         }
       } else {
-        console.error('❌ No task ID found');
+        console.error(' No task ID found');
       }
     } catch (err) {
       console.error('Failed to update task:', err);
@@ -165,7 +165,7 @@ export default function Dashboard() {
       <div className="flex items-start justify-between">
         <div>
           <h1 className="font-heading text-3xl font-bold tracking-wide text-foreground">
-            {greeting}, {firstName} 👋
+            {greeting}, {firstName}
           </h1>
           <p className="text-muted-foreground mt-1 text-sm">
             {format(new Date(), 'EEEE, MMMM do yyyy')} · {todayTasks.length} task{todayTasks.length !== 1 ? 's' : ''} due today
@@ -320,10 +320,10 @@ export default function Dashboard() {
             </div>
             <p className="text-sm text-foreground leading-relaxed">
               {completionRate >= 70
-                ? `🎯 You're crushing it! ${completionRate}% completion rate. Consider taking on a stretch goal today.`
+                ? ` You're crushing it! ${completionRate}% completion rate. Consider taking on a stretch goal today.`
                 : completionRate >= 40
-                ? `⚡ Good momentum. Focus on your ${overdueTasks.length} overdue task${overdueTasks.length !== 1 ? 's' : ''} first to clear the backlog.`
-                : "💡 Start small — pick your single most important task and work on it in a 25-minute Focus session."
+                ? ` Good momentum. Focus on your ${overdueTasks.length} overdue task${overdueTasks.length !== 1 ? 's' : ''} first to clear the backlog.`
+                : " Start small — pick your single most important task and work on it in a 25-minute Focus session."
               }
             </p>
             <Link to="/insights" className="text-xs text-primary hover:text-primary/80 flex items-center gap-1 mt-3 transition-colors">

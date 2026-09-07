@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Plus, Search, Filter, Sparkles, X, Loader2, Pencil, Trash2, ChevronDown } from 'lucide-react';
 import { useTasks } from '@/context/TaskContext';
 import { useAuth } from '@/lib/AuthContext';
+import { useWorkspace } from '@/context/WorkspaceContext';
 import TaskCard from '@/components/TaskCard';
 import NLPTaskInput from '@/components/NLPTaskInput';
 
@@ -11,6 +12,7 @@ const PRIORITIES = ['all', 'urgent', 'high', 'medium', 'low'];
 export default function Tasks() {
   const { tasks, loading, createTask, updateTask, deleteTask } = useTasks();
   const { user } = useAuth();
+  const { currentWorkspace } = useWorkspace();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
@@ -26,18 +28,20 @@ export default function Tasks() {
 
   useEffect(() => {
     const loadWorkspace = async () => {
+      if (!currentWorkspace) {
+        setWorkspace(null);
+        setMembers([]);
+        return;
+      }
       const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/workspace', { headers: { Authorization: `Bearer ${token}` } });
-      if (!response.ok) return;
-      const workspaces = await response.json();
-      if (!workspaces[0]) return;
-      const detailsResponse = await fetch(`/api/workspace/${workspaces[0].id}`, { headers: { Authorization: `Bearer ${token}` } });
-      const details = detailsResponse.ok ? await detailsResponse.json() : workspaces[0];
+      const workspaceId = currentWorkspace.id || currentWorkspace._id;
+      const detailsResponse = await fetch(`/api/workspace/${workspaceId}`, { headers: { Authorization: `Bearer ${token}` } });
+      const details = detailsResponse.ok ? await detailsResponse.json() : currentWorkspace;
       setWorkspace(details);
       setMembers(details.members || []);
     };
     if (user) loadWorkspace().catch((error) => console.error('Failed to load workspace members:', error));
-  }, [user]);
+  }, [currentWorkspace, user]);
 
   const createManual = async () => {
     if (!form.title.trim()) return;
@@ -67,7 +71,9 @@ export default function Tasks() {
     setSelectedTask(null);
   };
 
-  const filtered = tasks.filter(t => {
+  const workspaceId = workspace?._id || workspace?.id;
+  const visibleTasks = tasks.filter((task) => !task.workspace_id || String(task.workspace_id) === String(workspaceId));
+  const filtered = visibleTasks.filter(t => {
     const matchSearch = !search || t.title.toLowerCase().includes(search.toLowerCase()) || (t.description || '').toLowerCase().includes(search.toLowerCase());
     const matchStatus = statusFilter === 'all' || t.status === statusFilter;
     const matchPriority = priorityFilter === 'all' || t.priority === priorityFilter;
@@ -80,7 +86,7 @@ export default function Tasks() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="font-heading text-3xl font-bold tracking-wide text-foreground">TASKS</h1>
-          <p className="text-muted-foreground text-sm mt-1">{tasks.length} total · {tasks.filter(t => t.status === 'done').length} completed</p>
+          <p className="text-muted-foreground text-sm mt-1">{visibleTasks.length} total · {visibleTasks.filter(t => t.status === 'done').length} completed</p>
         </div>
         <div className="flex items-center gap-2">
           <button

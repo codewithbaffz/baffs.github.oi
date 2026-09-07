@@ -11,9 +11,9 @@ const createTransporter = () => {
     throw new Error('SMTP_USER and SMTP_PASS must be configured to send email');
   }
   
-  console.log('📧 Creating email transporter...');
+  console.log(' Creating email transporter...');
   console.log(' SMTP_USER:', user);
-  console.log(' SMTP_PASS set?', password ? '✅ Yes' : '❌ No');
+  console.log(' SMTP_PASS set?', password ? ' Yes' : ' No');
   
   return nodemailer.createTransport({
     host: process.env.SMTP_HOST || 'smtp.gmail.com',
@@ -60,7 +60,7 @@ export const sendInvitationEmail = async (inviteData) => {
 
   const inviteLink = `${frontendUrl}/accept-invite?token=${inviteToken}&workspace=${encodeURIComponent(workspaceName)}`;
 
-  // --- 🎨 MODERN EMAIL HTML ---
+  // ---  MODERN EMAIL HTML ---
   const htmlContent = `
     <!DOCTYPE html>
     <html>
@@ -284,7 +284,7 @@ export const sendInvitationEmail = async (inviteData) => {
 
                 <!-- HEADER -->
                 <div class="header">
-                  <span class="header-icon">🚀</span>
+                  <span class="header-icon"></span>
                   <h1>You're Invited!</h1>
                   <p class="subtitle">Join your team on Schedulfy</p>
                 </div>
@@ -300,7 +300,7 @@ export const sendInvitationEmail = async (inviteData) => {
                   </p>
 
                   <div style="text-align:center;">
-                    <span class="workspace-chip">🏢 ${workspaceName}</span>
+                    <span class="workspace-chip"> ${workspaceName}</span>
                   </div>
 
                   <hr class="divider" />
@@ -363,7 +363,7 @@ export const sendInvitationEmail = async (inviteData) => {
   const mailOptions = {
     from: `"${process.env.COMPANY_NAME || 'Schedulfy'}" <${process.env.SMTP_USER}>`,
     to: email,
-    subject: `✨ ${inviterName} invited you to ${workspaceName}`,
+    subject: ` ${inviterName} invited you to ${workspaceName}`,
     html: htmlContent,
     text: textContent,
   };
@@ -376,21 +376,21 @@ export const sendInvitationEmail = async (inviteData) => {
 
       try {
         const info = await transporter.sendMail(mailOptions);
-        console.log('✅ Invitation email sent:', info.messageId);
+        console.log(' Invitation email sent:', info.messageId);
         return { success: true, messageId: info.messageId };
       } catch (error) {
         lastError = error;
         const transientError = ['ECONNECTION', 'ETIMEDOUT', 'ESOCKET', 'ENETUNREACH'].includes(error.code);
 
         if (!transientError || attempt === 2) throw error;
-        console.warn('⚠️ SMTP connection failed; retrying invitation email...');
+        console.warn(' SMTP connection failed; retrying invitation email...');
         await new Promise((resolve) => setTimeout(resolve, 1000));
       }
     }
 
     throw lastError;
   } catch (error) {
-    console.error('❌ Failed to send invitation email:', error);
+    console.error(' Failed to send invitation email:', error);
     throw new Error(`Failed to send invitation email: ${error.message}`);
   }
 };

@@ -91,7 +91,7 @@ body,
     --sidebar-ring: 248 100% 70%;
   }
 
-  /* ✅ FIXED: Added these two rules that were missing */
+  /*  FIXED: Added these two rules that were missing */
   * {
     @apply border-border outline-ring/50;
   }
@@ -127,6 +127,11 @@ body,
   
   .glow-indigo {
     box-shadow: 0 0 20px rgba(108, 99, 255, 0.3);
+  }
+
+  .workspace-selector option {
+    background-color: hsl(var(--card));
+    color: hsl(var(--card-foreground));
   }
   
   .glow-cyan {

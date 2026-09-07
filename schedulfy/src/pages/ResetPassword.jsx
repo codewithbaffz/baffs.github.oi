@@ -1,7 +1,7 @@
 // pages/ResetPassword.jsx
 import { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { Lock, Loader2, AlertTriangle } from "lucide-react";
+import { Lock, Loader2, AlertTriangle, Eye, EyeOff } from "lucide-react";
 import AuthLayout from "@/components/AuthLayout";
 import { schedulfy } from "@/api/schedulfyClient";
 
@@ -11,6 +11,8 @@ export default function ResetPassword() {
 
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -84,7 +86,7 @@ export default function ResetPassword() {
           <div className="relative">
             <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
             <input
-              type="password"
+              type={showNewPassword ? "text" : "password"}
               autoComplete="new-password"
               autoFocus
               placeholder="••••••••"
@@ -93,6 +95,14 @@ export default function ResetPassword() {
               className="pl-10 h-12 w-full border border-border bg-card rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1"
               required
             />
+            <button
+              type="button"
+              onClick={() => setShowNewPassword((visible) => !visible)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
+              aria-label={showNewPassword ? "Hide new password" : "Show new password"}
+            >
+              {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
           </div>
         </div>
         
@@ -101,7 +111,7 @@ export default function ResetPassword() {
           <div className="relative">
             <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
             <input
-              type="password"
+              type={showConfirmPassword ? "text" : "password"}
               autoComplete="new-password"
               placeholder="••••••••"
               value={confirmPassword}
@@ -109,6 +119,14 @@ export default function ResetPassword() {
               className="pl-10 h-12 w-full border border-border bg-card rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1"
               required
             />
+            <button
+              type="button"
+              onClick={() => setShowConfirmPassword((visible) => !visible)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
+              aria-label={showConfirmPassword ? "Hide confirmation password" : "Show confirmation password"}
+            >
+              {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
           </div>
         </div>
         

@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-// ✅ API key is secure in backend
+//  API key is secure in backend
 const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY,
 });

@@ -24,6 +24,18 @@ const UserSchema = new mongoose.Schema({
     type: Date,
     default: null,
   },
+  settings: {
+    display_name: { type: String, default: '' },
+    bio: { type: String, default: '' },
+    avatar_url: { type: String, default: '' },
+    timezone: { type: String, default: 'UTC' },
+    peak_hours_start: { type: Number, default: 9 },
+    peak_hours_end: { type: Number, default: 17 },
+    reminder_1day_enabled: { type: Boolean, default: true },
+    reminder_1hour_enabled: { type: Boolean, default: true },
+    google_calendar_connected: { type: Boolean, default: false },
+    zoom_connected: { type: Boolean, default: false },
+  },
   created_at: {
     type: Date,
     default: Date.now,

@@ -136,7 +136,7 @@ router.get('/test', (req, res) => {
 
 // Register
 router.post('/register', async (req, res) => {
-  console.log('📝 Register request received');
+  console.log(' Register request received');
   
   try {
     const { name, email, password } = req.body;
@@ -168,7 +168,7 @@ router.post('/register', async (req, res) => {
     });
     await user.save();
     
-    console.log('✅ User created:', { id: user._id, email: user.email });
+    console.log(' User created:', { id: user._id, email: user.email });
     
     // Create token
     const token = jwt.sign(
@@ -188,7 +188,7 @@ router.post('/register', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('❌ Register error:', error);
+    console.error(' Register error:', error);
     res.status(500).json({ 
       message: error.message || 'Registration failed'
     });
@@ -197,15 +197,15 @@ router.post('/register', async (req, res) => {
 
 // Login
 router.post('/login', async (req, res) => {
-  console.log('🔐 Login request received');
-  console.log('📧 Email:', req.body?.email);
+  console.log(' Login request received');
+  console.log(' Email:', req.body?.email);
   
   try {
     const { email, password } = req.body;
     
     // Validate input
     if (!email || !password) {
-      console.log('❌ Missing credentials');
+      console.log(' Missing credentials');
       return res.status(400).json({ 
         message: 'Email and password are required'
       });
@@ -214,18 +214,18 @@ router.post('/login', async (req, res) => {
     // Find user
     const user = await User.findOne({ email: email.toLowerCase() });
     if (!user) {
-      console.log('❌ User not found:', email);
+      console.log(' User not found:', email);
       return res.status(400).json({ message: 'Invalid credentials' });
     }
     
     // Check password
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      console.log('❌ Password mismatch for:', email);
+      console.log(' Password mismatch for:', email);
       return res.status(400).json({ message: 'Invalid credentials' });
     }
     
-    console.log('✅ User logged in:', { id: user._id, email: user.email });
+    console.log(' User logged in:', { id: user._id, email: user.email });
     
     // Create token
     const token = jwt.sign(
@@ -247,25 +247,25 @@ router.post('/login', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('❌ Login error:', error);
-    console.error('❌ Stack:', error.stack);
+    console.error(' Login error:', error);
+    console.error(' Stack:', error.stack);
     res.status(500).json({ 
       message: error.message || 'Login failed. Please try again.'
     });
   }
 });
 
-// ✅ FIXED: Get current user - Using req.userId (set by middleware)
+//  FIXED: Get current user - Using req.userId (set by middleware)
 router.get('/me', authenticate, async (req, res) => {
-  console.log('🔍 /me endpoint called');
-  console.log('🔍 User ID from token (req.userId):', req.userId);
+  console.log(' /me endpoint called');
+  console.log(' User ID from token (req.userId):', req.userId);
   
   try {
-    // ✅ Use req.userId from middleware
+    //  Use req.userId from middleware
     const userId = req.userId;
     
     if (!userId) {
-      console.log('❌ No user ID found in request');
+      console.log(' No user ID found in request');
       return res.status(401).json({ 
         message: 'User ID not found. Please login again.'
       });
@@ -275,13 +275,13 @@ router.get('/me', authenticate, async (req, res) => {
     const user = await User.findById(userId).select('-password');
     
     if (!user) {
-      console.log('❌ User not found for ID:', userId);
+      console.log(' User not found for ID:', userId);
       return res.status(404).json({ 
         message: 'User not found'
       });
     }
 
-    console.log('✅ User authenticated:', { id: user._id, email: user.email });
+    console.log(' User authenticated:', { id: user._id, email: user.email });
     
     // Return user data
     res.json({
@@ -294,14 +294,72 @@ router.get('/me', authenticate, async (req, res) => {
       createdAt: user.createdAt || user.created_at
     });
   } catch (error) {
-    console.error('❌ /me error:', error);
+    console.error(' /me error:', error);
     res.status(500).json({ 
       message: error.message || 'Failed to fetch user'
     });
   }
 });
 
-// ✅ Add a health check endpoint
+router.get('/settings', authenticate, async (req, res) => {
+  try {
+    const user = await User.findById(req.userId).select('-password -password_reset_token_hash -password_reset_expires_at');
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    res.json({
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role || 'member',
+      ...(user.settings?.toObject?.() || user.settings || {}),
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to load settings' });
+  }
+});
+
+router.patch('/settings', authenticate, async (req, res) => {
+  try {
+    const allowedFields = [
+      'display_name', 'bio', 'avatar_url', 'timezone', 'peak_hours_start',
+      'peak_hours_end', 'reminder_1day_enabled', 'reminder_1hour_enabled',
+      'google_calendar_connected', 'zoom_connected',
+    ];
+    const updates = Object.fromEntries(
+      allowedFields
+        .filter((field) => req.body?.[field] !== undefined)
+        .map((field) => [`settings.${field}`, req.body[field]])
+    );
+    if (typeof updates['settings.display_name'] === 'string' && !updates['settings.display_name'].trim()) {
+      return res.status(400).json({ message: 'Display name cannot be empty' });
+    }
+    const user = await User.findByIdAndUpdate(req.userId, { $set: updates }, { new: true, runValidators: true })
+      .select('-password -password_reset_token_hash -password_reset_expires_at');
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    res.json(user.settings?.toObject?.() || user.settings || {});
+  } catch (error) {
+    res.status(400).json({ message: error.message || 'Failed to save settings' });
+  }
+});
+
+router.patch('/password', authenticate, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body || {};
+    if (!currentPassword || !newPassword || newPassword.length < 6) {
+      return res.status(400).json({ message: 'Current password and a new password of at least 6 characters are required' });
+    }
+    const user = await User.findById(req.userId);
+    if (!user || !(await bcrypt.compare(currentPassword, user.password))) {
+      return res.status(400).json({ message: 'Current password is incorrect' });
+    }
+    user.password = newPassword;
+    await user.save();
+    res.json({ success: true, message: 'Password updated successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to update password' });
+  }
+});
+
+//  Add a health check endpoint
 router.get('/health', (req, res) => {
   res.json({ 
     status: 'OK',

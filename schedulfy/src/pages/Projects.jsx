@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { isPast } from 'date-fns';
 import { useTasks } from '@/context/TaskContext';
 import { useAuth } from '@/lib/AuthContext';
+import { useWorkspace } from '@/context/WorkspaceContext';
 import { 
   Plus, Trash2, X, Sparkles, CheckSquare, Clock, ChevronRight, 
   Filter, Loader2, FolderOpen, Users, UserPlus, User, 
@@ -45,6 +46,7 @@ const SORT_OPTIONS = ['Due Date', 'Priority', 'Created Date'];
 export default function Projects() {
   const { tasks, loading: tasksLoading, createTask, updateTask, deleteTask } = useTasks();
   const { user } = useAuth();
+  const { currentWorkspace } = useWorkspace();
   
   const [projects, setProjects] = useState(DEMO_PROJECTS);
   const [selectedProject, setSelectedProject] = useState(null);
@@ -80,12 +82,6 @@ export default function Projects() {
     if (!token || !user) return;
 
     try {
-      const response = await fetch('/api/workspace', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!response.ok) return;
-      const workspaces = await response.json();
-      const currentWorkspace = workspaces[0];
       if (!currentWorkspace) return;
 
       const detailsResponse = await fetch(`/api/workspace/${currentWorkspace.id || currentWorkspace._id}`, {
@@ -106,7 +102,7 @@ export default function Projects() {
     } catch (error) {
       console.error('Failed to load workspace members:', error);
     }
-  }, [user]);
+  }, [user, currentWorkspace]);
 
   // Load projects and workspace members after authentication is available.
   useEffect(() => {
@@ -118,7 +114,7 @@ export default function Projects() {
   const loadProjects = async () => {
     setLoading(true);
     try {
-      console.log('📋 Fetching projects from backend...');
+      console.log(' Fetching projects from backend...');
       
       const token = localStorage.getItem('authToken');
       if (!token) {
@@ -136,13 +132,17 @@ export default function Projects() {
 
       if (response.ok) {
         const data = await response.json();
-        console.log('✅ Projects fetched:', data);
+        console.log(' Projects fetched:', data);
         
         const projectsData = (Array.isArray(data) ? data : data.projects || data.data || [])
           .map((project) => ({ ...project, id: project.id || project._id }));
-        if (projectsData.length > 0) {
+        const workspaceId = currentWorkspace?.id || currentWorkspace?._id;
+        const scopedProjects = projectsData.filter(
+          (project) => !project.workspace_id || String(project.workspace_id) === String(workspaceId)
+        );
+        if (scopedProjects.length > 0) {
           // Filter out projects without valid IDs
-          const validProjects = projectsData.filter(p => p && p.id);
+          const validProjects = scopedProjects.filter(p => p && p.id);
           if (validProjects.length > 0) {
             setProjects(validProjects);
           } else {
@@ -158,7 +158,7 @@ export default function Projects() {
         setProjects(DEMO_PROJECTS);
       }
     } catch (error) {
-      console.error('❌ Failed to fetch projects:', error);
+      console.error(' Failed to fetch projects:', error);
       console.log('Using demo data as fallback');
       setProjects(DEMO_PROJECTS);
     } finally {
@@ -179,7 +179,7 @@ export default function Projects() {
       return;
     }
     
-    console.log('🖱️ Clicked project:', project.name || project.id);
+    console.log(' Clicked project:', project.name || project.id);
     
     if (selectedProject && selectedProject.id === project.id) {
       setSelectedProject(null);
@@ -218,7 +218,7 @@ export default function Projects() {
       if (response.ok) {
         const createdResponse = await response.json();
         const created = { ...createdResponse, id: createdResponse.id || createdResponse._id };
-        console.log('✅ Project created:', created);
+        console.log(' Project created:', created);
         setProjects(prev => [created, ...prev]);
         setSelectedProject(created);
       } else {
@@ -232,7 +232,7 @@ export default function Projects() {
         setSelectedProject(localProject);
       }
     } catch (error) {
-      console.error('❌ Failed to create project:', error);
+      console.error(' Failed to create project:', error);
       const localProject = {
         id: Date.now().toString(),
         name: form.name,
@@ -269,7 +269,7 @@ export default function Projects() {
           },
         });
         if (response.ok) {
-          console.log('✅ Project deleted from backend');
+          console.log(' Project deleted from backend');
         }
       }
     } catch (error) {
@@ -303,7 +303,7 @@ export default function Projects() {
         });
         
         if (response.ok) {
-          console.log('✅ Project status updated:', newStatus);
+          console.log(' Project status updated:', newStatus);
           setProjects(prev => prev.map(p => p.id === projectId ? { ...p, status: newStatus } : p));
           if (selectedProject?.id === projectId) {
             setSelectedProject(prev => ({ ...prev, status: newStatus }));
@@ -336,7 +336,7 @@ export default function Projects() {
         return;
       }
       
-      console.log(`📝 Assigning task "${task.title}" to ${member.name}`);
+      console.log(` Assigning task "${task.title}" to ${member.name}`);
       
       const updatedTask = { 
         ...task, 
@@ -347,12 +347,12 @@ export default function Projects() {
       
       await updateTask(taskId, updatedTask);
       
-      console.log('✅ Task assigned successfully:', updatedTask);
+      console.log(' Task assigned successfully:', updatedTask);
       
       setShowAssignModal(false);
       setSelectedTaskForAssign(null);
     } catch (error) {
-      console.error('❌ Failed to assign task:', error);
+      console.error(' Failed to assign task:', error);
     }
   };
 
@@ -362,7 +362,7 @@ export default function Projects() {
       const task = tasks.find(t => (t.id || t._id) === taskId);
       if (!task) return;
       
-      console.log(`📝 Unassigning task "${task.title}"`);
+      console.log(` Unassigning task "${task.title}"`);
       
       const updatedTask = { 
         ...task, 
@@ -373,11 +373,11 @@ export default function Projects() {
       
       await updateTask(taskId, updatedTask);
       
-      console.log('✅ Task unassigned successfully');
+      console.log(' Task unassigned successfully');
       setShowAssignModal(false);
       setSelectedTaskForAssign(null);
     } catch (error) {
-      console.error('❌ Failed to unassign task:', error);
+      console.error(' Failed to unassign task:', error);
     }
   };
 
@@ -517,7 +517,7 @@ export default function Projects() {
         source: task.source || 'manual',
       };
       
-      console.log('📤 Creating task with AI:', taskData);
+      console.log(' Creating task with AI:', taskData);
       
       const created = await createTask(taskData);
       if (created) {
@@ -553,7 +553,7 @@ export default function Projects() {
         tags: [],
       };
       
-      console.log('📤 Creating manual task:', taskData);
+      console.log(' Creating manual task:', taskData);
       
       const created = await createTask(taskData);
       if (created) {

@@ -12,8 +12,8 @@ const InsightChat = ({ tasks, sessions, onClose }) => {
       id: 1, 
       sender: 'ai', 
       text: isAuthenticated 
-        ? '👋 Hello! I can help you analyze your productivity data. What would you like to know?' 
-        : '👋 Please login to use the AI assistant. Once logged in, I can help you manage your tasks!'
+        ? ' Hello! I can help you analyze your productivity data. What would you like to know?'
+        : ' Please login to use the AI assistant. Once logged in, I can help you manage your tasks!'
     }
   ]);
   const [input, setInput] = useState('');
@@ -35,7 +35,7 @@ const InsightChat = ({ tasks, sessions, onClose }) => {
 
   const sendToAI = async (userMessage) => {
     try {
-      // ✅ FIXED: Use 'authToken' (matches your AuthContext)
+      //  FIXED: Use 'authToken' (matches your AuthContext)
       const token = localStorage.getItem('authToken');
       
       if (!token) {
@@ -111,14 +111,14 @@ const InsightChat = ({ tasks, sessions, onClose }) => {
         const result = await executeResponse.json();
         
         if (result.success) {
-          return `✅ ${result.message || 'Action completed successfully!'}`;
+          return ` ${result.message || 'Action completed successfully!'}`;
         } else {
           throw new Error(result.message || 'Failed to execute action');
         }
       }
 
       if (action.requiresConfirmation) {
-        return `⚠️ ${action.message}\n\nPlease type "confirm" to proceed with this action.`;
+        return ` ${action.message}\n\nPlease type "confirm" to proceed with this action.`;
       }
 
       return action.message || 'Action processed successfully!';
@@ -148,7 +148,7 @@ const InsightChat = ({ tasks, sessions, onClose }) => {
       
       let fallbackText = '';
       if (error.message.includes('login') || error.message.includes('Session expired')) {
-        fallbackText = '🔒 Please login again to use the AI assistant.';
+        fallbackText = ' Please login again to use the AI assistant.';
       } else if (error.message.includes('Rate limit')) {
         fallbackText = '⏳ Too many requests. Please wait a moment before trying again.';
       } else if (error.message.includes('confirm')) {

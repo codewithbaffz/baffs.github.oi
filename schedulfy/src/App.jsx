@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import { TaskProvider } from "./context/TaskContext";
 import { EventProvider } from "./context/EventContext";
+import { WorkspaceProvider } from "./context/WorkspaceContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Layout from "./components/Layout";
 import Login from "./pages/Login";
@@ -22,8 +23,9 @@ import AcceptInvitation from './pages/AcceptInvitation';
 
 export default function App() {
   return (
-    <TaskProvider>
-      <EventProvider>
+    <WorkspaceProvider>
+      <TaskProvider>
+        <EventProvider>
         <Routes>
           
           <Route path="/login" element={<Login />} />
@@ -50,7 +52,8 @@ export default function App() {
           {/* Redirect unknown routes to home */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-      </EventProvider>
-    </TaskProvider>
+        </EventProvider>
+      </TaskProvider>
+    </WorkspaceProvider>
   );
 }

@@ -119,34 +119,46 @@ const auth = {
 
   me: () => apiCall('/auth/me'),
 
+  getSettings: () => apiCall('/auth/settings'),
+
+  updateSettings: (settings) => apiCall('/auth/settings', {
+    method: 'PATCH',
+    body: JSON.stringify(settings),
+  }),
+
+  changePassword: (data) => apiCall('/auth/password', {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  }),
+
   redirectToLogin: (returnUrl) => {
     localStorage.removeItem('authToken');
     localStorage.removeItem('demo_user');
     window.location.href = `/login?returnUrl=${encodeURIComponent(returnUrl || window.location.href)}`;
   },
 
-  // ✅ ADDED: Forgot Password
+  //  ADDED: Forgot Password
   forgotPassword: (email) =>
     apiCall('/auth/forgot-password', {
       method: 'POST',
       body: JSON.stringify({ email }),
     }),
 
-  // ✅ ADDED: Reset Password
+  //  ADDED: Reset Password
   resetPassword: (data) =>
     apiCall('/auth/reset-password', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
 
-  // ✅ ADDED: Verify OTP (if needed)
+  //  ADDED: Verify OTP (if needed)
   verifyOtp: (data) =>
     apiCall('/auth/verify-otp', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
 
-  // ✅ ADDED: Resend OTP (if needed)
+  //  ADDED: Resend OTP (if needed)
   resendOtp: (email) =>
     apiCall('/auth/resend-otp', {
       method: 'POST',

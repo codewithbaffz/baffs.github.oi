@@ -36,7 +36,7 @@ export default function TaskDetailModal({ task: initialTask, onClose, onUpdate, 
   const [deleting, setDeleting] = useState(false);
   const [user, setUser] = useState(null);
 
-  // ✅ Fixed: loadComments wrapped in useCallback
+  //  Fixed: loadComments wrapped in useCallback
   const loadComments = useCallback(async () => {
     const data = await schedulfy.entities.Comment.filter({ task_id: task.id }, 'created_date', 50);
     setComments(data);

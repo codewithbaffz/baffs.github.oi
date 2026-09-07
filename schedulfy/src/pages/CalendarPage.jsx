@@ -48,10 +48,10 @@ const SOURCE_COLOR = {
 
 // Priority options for tasks
 const PRIORITY_OPTIONS = [
-  { value: 'low', label: 'Low', color: 'text-green-400', icon: '🟢' },
-  { value: 'medium', label: 'Medium', color: 'text-yellow-400', icon: '🟡' },
-  { value: 'high', label: 'High', color: 'text-orange-400', icon: '🟠' },
-  { value: 'urgent', label: 'Urgent', color: 'text-red-500', icon: '🔴' },
+  { value: 'low', label: 'Low', color: 'text-green-400', icon: '' },
+  { value: 'medium', label: 'Medium', color: 'text-yellow-400', icon: '' },
+  { value: 'high', label: 'High', color: 'text-orange-400', icon: '' },
+  { value: 'urgent', label: 'Urgent', color: 'text-red-500', icon: '' },
 ];
 
 // Color options for events
@@ -497,7 +497,7 @@ export default function CalendarPage() {
                         onClick={(ev) => { ev.stopPropagation(); setShowTaskDetails(t); }}
                         className="text-xs px-1.5 py-0.5 rounded border truncate cursor-pointer hover:opacity-80 bg-orange-400/10 border-orange-400/30 text-orange-400"
                       >
-                        {PRIORITY_OPTIONS.find(p => p.value === t.priority)?.icon || '📌'} {t.title}
+                        {PRIORITY_OPTIONS.find(p => p.value === t.priority)?.icon || ''} {t.title}
                       </div>
                     ))}
                     {total > 3 && <div className="text-xs text-muted-foreground">+{total - 3} more</div>}

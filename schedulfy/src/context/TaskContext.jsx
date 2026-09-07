@@ -45,12 +45,12 @@ export const TaskProvider = ({ children }) => {
       setError(null);
       
       const data = await schedulfySDK.tasks.getAll();
-      console.log('📦 Fetched tasks from API:', data);
+      console.log(' Fetched tasks from API:', data);
       
       // Normalize all tasks to have both _id and id
       const normalizedTasks = normalizeTasks(data);
       setTasks(normalizedTasks);
-      console.log('✅ Normalized tasks:', normalizedTasks);
+      console.log(' Normalized tasks:', normalizedTasks);
     } catch (err) {
       console.error('Error loading tasks:', err);
       setError(err.message || 'Failed to load tasks');
@@ -67,7 +67,7 @@ export const TaskProvider = ({ children }) => {
     try {
       setLoading(true);
       const newTask = await schedulfySDK.tasks.create(taskData);
-      console.log('✨ Created task:', newTask);
+      console.log(' Created task:', newTask);
       
       // Normalize the new task
       const normalizedTask = normalizeTask(newTask);
@@ -87,11 +87,11 @@ export const TaskProvider = ({ children }) => {
     try {
       setLoading(true);
       
-      console.log('🔧 updateTask - ID received:', taskId);
-      console.log('🔧 updateTask - Updates:', updates);
+      console.log(' updateTask - ID received:', taskId);
+      console.log(' updateTask - Updates:', updates);
       
       if (!taskId) {
-        console.error('❌ No task ID provided');
+        console.error(' No task ID provided');
         return { success: false, error: 'No task ID provided' };
       }
       
@@ -102,17 +102,17 @@ export const TaskProvider = ({ children }) => {
       );
       
       if (!existingTask) {
-        console.error('❌ Task not found in local state:', taskId);
+        console.error(' Task not found in local state:', taskId);
         console.log('Available tasks:', tasks.map(t => ({ _id: t._id, id: t.id, title: t.title })));
         return { success: false, error: 'Task not found' };
       }
       
       // Use the _id for the API call (MongoDB)
       const idToUse = existingTask._id || taskId;
-      console.log('📤 Using _id for update:', idToUse);
+      console.log(' Using _id for update:', idToUse);
       
       const updatedTask = await schedulfySDK.tasks.update(idToUse, updates);
-      console.log('✅ Updated task received:', updatedTask);
+      console.log(' Updated task received:', updatedTask);
       
       // Normalize the updated task
       const normalizedTask = normalizeTask(updatedTask);
@@ -122,18 +122,18 @@ export const TaskProvider = ({ children }) => {
         const newTasks = prev.map(task => {
           // Check both _id and id
           if (String(task._id) === String(taskId) || String(task.id) === String(taskId)) {
-            console.log('🔄 Updating task in state:', taskId);
+            console.log(' Updating task in state:', taskId);
             return normalizedTask;
           }
           return task;
         });
-        console.log('📊 Updated tasks count:', newTasks.length);
+        console.log(' Updated tasks count:', newTasks.length);
         return newTasks;
       });
       
       return { success: true, data: normalizedTask };
     } catch (err) {
-      console.error('❌ Error updating task:', err);
+      console.error(' Error updating task:', err);
       setError(err.message || 'Failed to update task');
       return { success: false, error: err.message };
     } finally {
@@ -146,7 +146,7 @@ export const TaskProvider = ({ children }) => {
       setLoading(true);
       
       if (!taskId) {
-        console.error('❌ No task ID provided for deletion');
+        console.error(' No task ID provided for deletion');
         return { success: false, error: 'No task ID provided' };
       }
       
@@ -157,13 +157,13 @@ export const TaskProvider = ({ children }) => {
       );
       
       if (!existingTask) {
-        console.error('❌ Task not found for deletion:', taskId);
+        console.error(' Task not found for deletion:', taskId);
         return { success: false, error: 'Task not found' };
       }
       
       // Use the _id for the API call
       const idToUse = existingTask._id || taskId;
-      console.log('🗑️ Deleting task with _id:', idToUse);
+      console.log(' Deleting task with _id:', idToUse);
       
       await schedulfySDK.tasks.delete(idToUse);
       
@@ -171,17 +171,17 @@ export const TaskProvider = ({ children }) => {
         const newTasks = prev.filter(task => {
           const match = String(task._id) !== String(taskId) && String(task.id) !== String(taskId);
           if (!match) {
-            console.log('🗑️ Removed task:', taskId);
+            console.log(' Removed task:', taskId);
           }
           return match;
         });
-        console.log('📊 Remaining tasks:', newTasks.length);
+        console.log(' Remaining tasks:', newTasks.length);
         return newTasks;
       });
       
       return { success: true };
     } catch (err) {
-      console.error('❌ Error deleting task:', err);
+      console.error(' Error deleting task:', err);
       setError(err.message || 'Failed to delete task');
       return { success: false, error: err.message };
     } finally {

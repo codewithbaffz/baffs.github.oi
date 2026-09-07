@@ -1,4 +1,6 @@
-import { useState, useEffect, useCallback } from 'react'; // ✅ Added useCallback
+import { useWorkspace } from '@/context/WorkspaceContext';
+  const { currentWorkspace } = useWorkspace();
+import { useState, useEffect, useCallback } from 'react'; //  Added useCallback
 import { base44 } from '@/api/base44Client';
 import { format, isPast, isToday } from 'date-fns';
 
@@ -41,7 +43,7 @@ export default function TaskDetailModal({ task: initialTask, onClose, onUpdate, 
   // Team members state
   const [members, setMembers] = useState([]);
   const [workspace, setWorkspace] = useState(null);
-  const [_loadingMembers, setLoadingMembers] = useState(false); // ✅ Re-added
+  const [_loadingMembers, setLoadingMembers] = useState(false); //  Re-added
   const [showAssign, setShowAssign] = useState(false);
   const [assigning, setAssigning] = useState(false);
 
@@ -55,17 +57,11 @@ export default function TaskDetailModal({ task: initialTask, onClose, onUpdate, 
     }
   }, [task.id]);
 
-  // ✅ Fixed: loadWorkspaceMembers wrapped in useCallback
+  //  Fixed: loadWorkspaceMembers wrapped in useCallback
   const loadWorkspaceMembers = useCallback(async (user) => {
     setLoadingMembers(true);
     try {
-      const workspaces = await base44.entities.Workspace.filter({ admin_id: user.id }, '-created_date', 1);
-      let ws = workspaces[0];
-      
-      if (!ws) {
-        const memberWs = await base44.entities.Workspace.list('-created_date', 1);
-        ws = memberWs.find(w => w.member_ids && w.member_ids.includes(user.id));
-      }
+      const ws = currentWorkspace;
 
       if (ws) {
         setWorkspace(ws);
@@ -81,8 +77,9 @@ export default function TaskDetailModal({ task: initialTask, onClose, onUpdate, 
       setLoadingMembers(false);
     }
   }, []);
+  }, [currentWorkspace]);
 
-  // ✅ Fixed: loadData wrapped in useCallback
+  //  Fixed: loadData wrapped in useCallback
   const loadData = useCallback(async () => {
     try {
       const u = await base44.auth.me();
@@ -96,7 +93,7 @@ export default function TaskDetailModal({ task: initialTask, onClose, onUpdate, 
 
   useEffect(() => {
     loadData();
-  }, [loadData]); // ✅ Now stable
+  }, [loadData]); //  Now stable
 
   const saveEdit = async () => {
     setSaving(true);

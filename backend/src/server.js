@@ -31,7 +31,7 @@ app.use('/api/events', eventRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/workspace', workspaceRoutes);
-app.use('/api/ai', aiRoutes); // ✅ FIXED: Added /api prefix
+app.use('/api/ai', aiRoutes); //  FIXED: Added /api prefix
 app.use('/api/notifications', notificationRoutes);
 
 // Test route
@@ -58,7 +58,7 @@ app.use((req, res) => {
 
 // Global error handler
 app.use((err, req, res, next) => {
-  console.error('❌ Error:', err.stack);
+  console.error(' Error:', err.stack);
   
   // Handle MongoDB duplicate key errors
   if (err.code === 11000) {
@@ -101,22 +101,22 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/productiv
   useUnifiedTopology: true,
 })
   .then(() => {
-    console.log('✅ Connected to MongoDB');
+    console.log(' Connected to MongoDB');
     app.listen(PORT, () => {
-      console.log(`🚀 Server running on http://localhost:${PORT}`);
+      console.log(` Server running on http://localhost:${PORT}`);
       console.log(`   Test: http://localhost:${PORT}/api/test`);
       console.log(`   Auth: http://localhost:${PORT}/api/auth`);
       console.log(`   Tasks: http://localhost:${PORT}/api/tasks`);
-      console.log(`   AI: http://localhost:${PORT}/api/ai/command`); // ✅ Now matches frontend
+      console.log(`   AI: http://localhost:${PORT}/api/ai/command`); //  Now matches frontend
     });
   })
   .catch(err => {
-    console.error('❌ MongoDB connection error:', err.message);
-    console.log('⚠️ Server will start without MongoDB (some features may not work)');
+    console.error(' MongoDB connection error:', err.message);
+    console.log(' Server will start without MongoDB (some features may not work)');
     
     // Still start the server even if MongoDB fails
     app.listen(PORT, () => {
-      console.log(`🚀 Server running on http://localhost:${PORT} (without MongoDB)`);
+      console.log(` Server running on http://localhost:${PORT} (without MongoDB)`);
     });
   });
 
@@ -124,10 +124,10 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/productiv
 process.on('SIGINT', async () => {
   try {
     await mongoose.connection.close();
-    console.log('✅ MongoDB connection closed');
+    console.log(' MongoDB connection closed');
     process.exit(0);
   } catch (err) {
-    console.error('❌ Error closing MongoDB connection:', err);
+    console.error(' Error closing MongoDB connection:', err);
     process.exit(1);
   }
 });

@@ -1,5 +1,5 @@
 // src/services/aiService.js
-// ✅ Updated to use backend API - NO GROQ API KEY NEEDED
+//  Updated to use backend API - NO GROQ API KEY NEEDED
 
 import { schedulfySDK } from '@/lib/sdk';
 
@@ -47,7 +47,7 @@ class AIService {
       console.error('AI command error:', error);
       return {
         type: 'error',
-        message: `❌ ${error.message || 'I had trouble processing that. Please try again.'}`,
+        message: ` ${error.message || 'I had trouble processing that. Please try again.'}`,
         data: null,
         confidence: 0,
         requiresConfirmation: false,
@@ -85,7 +85,7 @@ class AIService {
       return {
         success: false,
         error: error.message,
-        message: '❌ Failed to execute action. Please try again.',
+        message: ' Failed to execute action. Please try again.',
       };
     }
   }

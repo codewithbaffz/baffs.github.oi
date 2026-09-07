@@ -12,7 +12,7 @@ export default function InsightChat({ tasks, sessions }) {
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
-      content: "Hey! I'm your Schedulfy AI Coach 👋 Ask me anything about your productivity, tasks, or how to improve your workflow.",
+      content: "Hey! I'm your Schedulfy AI Coach  Ask me anything about your productivity, tasks, or how to improve your workflow.",
     },
   ]);
   const [input, setInput] = useState('');

@@ -98,7 +98,7 @@ export default function Templates() {
           localStorage.setItem('templates', JSON.stringify(created));
           data = created;
         }
-        console.log(`✅ Loaded ${data.length} templates`);
+        console.log(` Loaded ${data.length} templates`);
       } catch (_err) {
         console.error('Error loading templates:', _err);
         data = [];
@@ -158,7 +158,7 @@ export default function Templates() {
 
       setDeployingId(null);
       setDeployDate('');
-      alert(`✅ ${createdTasks.length} tasks created from "${template.name}"!`);
+      alert(` ${createdTasks.length} tasks created from "${template.name}"!`);
     } catch (_err) {
       console.error('Error deploying template:', _err);
       setError('Failed to deploy template. Please try again.');
@@ -284,7 +284,7 @@ export default function Templates() {
         <div>
           <h1 className="font-heading text-3xl font-bold tracking-wide">TEMPLATES</h1>
           <p className="text-muted-foreground text-sm mt-1">
-            {templates.length > 0 ? `📋 ${templates.length} templates available` : 'Create your first template!'}
+            {templates.length > 0 ? ` ${templates.length} templates available` : 'Create your first template!'}
           </p>
         </div>
         <button

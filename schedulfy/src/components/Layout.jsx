@@ -20,7 +20,9 @@ import {
   Menu,
   LogOut,
   Bell,
+  ChevronsUpDown,
 } from 'lucide-react';
+import { useWorkspace } from '@/context/WorkspaceContext';
 
 const NAV_ITEMS = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
@@ -38,6 +40,7 @@ export default function Layout() {
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [notifOpen, setNotifOpen] = useState(false);
+  const { workspaces, currentWorkspace, selectWorkspace } = useWorkspace();
 
   const handleLogout = () => base44.auth.logout('/');
 
@@ -111,7 +114,21 @@ export default function Layout() {
       <div className="flex-1 flex flex-col min-w-0">
         {/* Topbar */}
         <header className="flex items-center justify-between px-6 py-3 border-b border-border bg-card/50 backdrop-blur-sm shrink-0">
-          <div />
+          <div className="flex items-center gap-2 min-w-0">
+            <ChevronsUpDown className="w-4 h-4 text-muted-foreground shrink-0" />
+            <select
+              value={currentWorkspace ? String(currentWorkspace.id || currentWorkspace._id) : ''}
+              onChange={(event) => selectWorkspace(event.target.value)}
+              className="workspace-selector max-w-64 rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium text-foreground shadow-sm transition-colors hover:border-primary/50 focus:border-primary focus:outline-none cursor-pointer"
+              aria-label="Select workspace"
+            >
+              {workspaces.length === 0 && <option value="">No workspaces</option>}
+              {workspaces.map((workspace) => {
+                const id = String(workspace.id || workspace._id);
+                return <option key={id} value={id}>{workspace.name}</option>;
+              })}
+            </select>
+          </div>
           <div className="flex items-center gap-3">
             <button
               onClick={() => setNotifOpen(!notifOpen)}

@@ -3,10 +3,10 @@ import { useAuth } from '@/lib/AuthContext.jsx';
 import { schedulfy } from '@/api/schedulfyClient';
 import { 
   Loader2, Camera, Shield, User, Zap, Clock, Bell, 
-  Mail, Copy, CheckCircle2, LinkIcon, Settings as SettingsIcon 
+  Mail, Copy, CheckCircle2, LinkIcon, Settings as SettingsIcon, Eye, EyeOff
 } from 'lucide-react';
 
-// ✅ Google Calendar Icon Component
+//  Google Calendar Icon Component
 const GoogleCalendarIcon = ({ className = "w-5 h-5" }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
     <path d="M20 3H4C2.89543 3 2 3.89543 2 5V19C2 20.1046 2.89543 21 4 21H20C21.1046 21 22 20.1046 22 19V5C22 3.89543 21.1046 3 20 3Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -22,7 +22,7 @@ const GoogleCalendarIcon = ({ className = "w-5 h-5" }) => (
   </svg>
 );
 
-// ✅ Zoom Icon Component
+//  Zoom Icon Component
 const ZoomIcon = ({ className = "w-5 h-5" }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
     <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
@@ -63,12 +63,18 @@ export default function Settings() {
   const [profile, setProfile] = useState(DEMO_PROFILE);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [settingsError, setSettingsError] = useState('');
+  const [settingsLoading, setSettingsLoading] = useState(true);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const fileInputRef = useRef(null);
   const [users, setUsers] = useState([]);
   const [usersLoading, setUsersLoading] = useState(false);
   const [usersError, setUsersError] = useState('');
   const [adminActionLoading, setAdminActionLoading] = useState(null);
+  const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
+  const [passwordMessage, setPasswordMessage] = useState('');
+  const [passwordSaving, setPasswordSaving] = useState(false);
+  const [visiblePasswords, setVisiblePasswords] = useState({ currentPassword: false, newPassword: false, confirmPassword: false });
 
   const [profileForm, setProfileForm] = useState({
     display_name: DEMO_PROFILE.display_name,
@@ -88,6 +94,43 @@ export default function Settings() {
     google_calendar_connected: DEMO_PROFILE.google_calendar_connected,
     zoom_connected: DEMO_PROFILE.zoom_connected,
   });
+
+  useEffect(() => {
+    if (!user) return;
+    let active = true;
+    setSettingsLoading(true);
+    schedulfy.auth.getSettings()
+      .then((data) => {
+        if (!active) return;
+        const settings = { ...DEMO_PROFILE, ...data };
+        setProfile(settings);
+        setProfileForm({
+          display_name: settings.display_name || settings.name || user.full_name || user.email,
+          bio: settings.bio || '',
+          avatar_url: settings.avatar_url || '',
+        });
+        setPrefsForm({
+          timezone: settings.timezone || 'UTC',
+          peak_hours_start: settings.peak_hours_start ?? 9,
+          peak_hours_end: settings.peak_hours_end ?? 17,
+        });
+        setNotifForm({
+          reminder_1day_enabled: settings.reminder_1day_enabled !== false,
+          reminder_1hour_enabled: settings.reminder_1hour_enabled !== false,
+        });
+        setIntegrationsForm({
+          google_calendar_connected: settings.google_calendar_connected === true,
+          zoom_connected: settings.zoom_connected === true,
+        });
+      })
+      .catch((error) => {
+        if (active) setSettingsError(error.message || 'Unable to load settings');
+      })
+      .finally(() => {
+        if (active) setSettingsLoading(false);
+      });
+    return () => { active = false; };
+  }, [user]);
 
   useEffect(() => {
     if (user?.role === 'admin') {
@@ -146,15 +189,44 @@ export default function Settings() {
     }, 800);
   };
 
-  const saveAll = () => {
+  const saveAll = async () => {
     setSaving(true);
-    setTimeout(() => {
+    setSettingsError('');
+    try {
       const merged = { ...profileForm, ...prefsForm, ...notifForm, ...integrationsForm };
+      const savedSettings = await schedulfy.auth.updateSettings(merged);
       setProfile(prev => ({ ...prev, ...merged }));
       setSaving(false);
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
-    }, 600);
+      return savedSettings;
+    } catch (error) {
+      setSettingsError(error.message || 'Unable to save settings');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const changePassword = async (event) => {
+    event.preventDefault();
+    setPasswordMessage('');
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      setPasswordMessage('New passwords do not match');
+      return;
+    }
+    setPasswordSaving(true);
+    try {
+      const result = await schedulfy.auth.changePassword({
+        currentPassword: passwordForm.currentPassword,
+        newPassword: passwordForm.newPassword,
+      });
+      setPasswordMessage(result.message || 'Password updated successfully');
+      setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    } catch (error) {
+      setPasswordMessage(error.message || 'Unable to update password');
+    } finally {
+      setPasswordSaving(false);
+    }
   };
 
   const copyEmail = () => {
@@ -173,6 +245,13 @@ export default function Settings() {
         <h1 className="font-heading text-3xl font-bold tracking-wide">SETTINGS</h1>
         <p className="text-muted-foreground text-sm mt-1">Manage your profile, preferences, and integrations</p>
       </div>
+
+      {settingsLoading && (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="w-4 h-4 animate-spin" /> Loading settings...
+        </div>
+      )}
+      {settingsError && <div className="rounded-lg border border-red-400/30 bg-red-400/10 p-3 text-sm text-red-400">{settingsError}</div>}
 
       {/* PROFILE CARD */}
       <section className="glass rounded-2xl border border-border overflow-hidden">
@@ -238,6 +317,49 @@ export default function Settings() {
         </div>
       </section>
 
+      {/* SECURITY */}
+      <section className="glass rounded-2xl border border-border p-6 space-y-4">
+        <div className="flex items-center gap-2 mb-1">
+          <div className="w-7 h-7 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
+            <Shield className="w-3.5 h-3.5 text-primary" />
+          </div>
+          <h2 className="font-heading text-base font-bold tracking-wide">SECURITY</h2>
+        </div>
+        <form onSubmit={changePassword} className="grid gap-3 md:grid-cols-3">
+          {[
+            ['currentPassword', 'Current password'],
+            ['newPassword', 'New password'],
+            ['confirmPassword', 'Confirm new password'],
+          ].map(([key, label]) => (
+            <div key={key} className="relative">
+              <input
+                type={visiblePasswords[key] ? 'text' : 'password'}
+                value={passwordForm[key]}
+                onChange={(event) => setPasswordForm((current) => ({ ...current, [key]: event.target.value }))}
+                placeholder={label}
+                minLength={key === 'currentPassword' ? undefined : 6}
+                required
+                className="w-full bg-secondary/60 border border-border rounded-lg px-3 pr-10 py-2 text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary/50"
+              />
+              <button
+                type="button"
+                onClick={() => setVisiblePasswords((current) => ({ ...current, [key]: !current[key] }))}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
+                aria-label={visiblePasswords[key] ? `Hide ${label.toLowerCase()}` : `Show ${label.toLowerCase()}`}
+              >
+                {visiblePasswords[key] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+          ))}
+          <div className="md:col-span-3 flex items-center justify-between gap-3">
+            <p className={`text-xs ${passwordMessage.toLowerCase().includes('success') ? 'text-green-400' : 'text-muted-foreground'}`}>{passwordMessage}</p>
+            <button type="submit" disabled={passwordSaving} className="flex items-center gap-2 px-4 py-2 border border-border rounded-lg text-sm font-semibold hover:bg-secondary disabled:opacity-50">
+              {passwordSaving && <Loader2 className="w-4 h-4 animate-spin" />} Update password
+            </button>
+          </div>
+        </form>
+      </section>
+
       {/* PRODUCTIVITY PREFERENCES */}
       <section className="glass rounded-2xl border border-border p-6 space-y-4">
         <div className="flex items-center gap-2 mb-1">
@@ -249,10 +371,21 @@ export default function Settings() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label className="text-xs text-muted-foreground uppercase tracking-wider block mb-1.5">Timezone</label>
-            <select value={prefsForm.timezone} onChange={e => setPrefsForm(p => ({ ...p, timezone: e.target.value }))}
+            <select
+              value={TIMEZONES.includes(prefsForm.timezone) ? prefsForm.timezone : '__custom__'}
+              onChange={e => setPrefsForm(p => ({ ...p, timezone: e.target.value === '__custom__' ? (TIMEZONES.includes(p.timezone) ? '' : p.timezone) : e.target.value }))}
               className="w-full bg-secondary/60 border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary/50">
               {TIMEZONES.map(tz => <option key={tz} value={tz}>{tz}</option>)}
+              <option value="__custom__">Other timezone...</option>
             </select>
+            {!TIMEZONES.includes(prefsForm.timezone) && (
+              <input
+                value={prefsForm.timezone}
+                onChange={e => setPrefsForm(p => ({ ...p, timezone: e.target.value }))}
+                placeholder="Enter your timezone or country"
+                className="w-full mt-2 bg-secondary/60 border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary/50"
+              />
+            )}
           </div>
           <div>
             <label className="text-xs text-muted-foreground uppercase tracking-wider block mb-1.5">
@@ -386,7 +519,7 @@ export default function Settings() {
         )}
       </section>
 
-      {/* INTEGRATIONS - ✅ FIXED WITH CUSTOM ICONS */}
+      {/* INTEGRATIONS -  FIXED WITH CUSTOM ICONS */}
       <section className="glass rounded-2xl border border-border p-6 space-y-4">
         <div className="flex items-center gap-2 mb-1">
           <div className="w-7 h-7 rounded-lg bg-green-400/10 border border-green-400/20 flex items-center justify-center">
@@ -420,7 +553,7 @@ export default function Settings() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                {/* ✅ Add Visit button */}
+                {/*  Add Visit button */}
                 <a
                   href={connectUrl}
                   target="_blank"
