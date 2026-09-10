@@ -57,7 +57,7 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#f0f2f5] px-4 py-10">
+    <div className="min-h-screen flex items-center justify-center bg-white px-4 py-10">
       {/* ── LEFT PANEL ── */}
       <div className="hidden">
         {/* Background blobs */}

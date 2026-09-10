@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useLocation, Link, Outlet } from 'react-router-dom';
 import NotificationPanel from './NotificationPanel';
 import { base44 } from '@/api/base44Client';
+import { useNotifications } from '@/hooks/useNotifications';
 
 import {
   LayoutDashboard,
@@ -40,7 +41,9 @@ export default function Layout() {
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [notifOpen, setNotifOpen] = useState(false);
+  const { hasUnread } = useNotifications();
   const { workspaces, currentWorkspace, selectWorkspace } = useWorkspace();
+
 
   const handleLogout = () => base44.auth.logout('/');
 
@@ -135,7 +138,9 @@ export default function Layout() {
               className="relative p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"
             >
               <Bell className="w-5 h-5" />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full animate-pulse-glow" />
+              {hasUnread && (
+                <span className="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full animate-pulse-glow" />
+              )}
             </button>
           </div>
         </header>

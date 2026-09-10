@@ -171,7 +171,7 @@ export default function Insights() {
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-6 animate-fade-in">
       <div>
-        <h1 className="font-heading text-3xl font-bold tracking-wide">SCHEDULFY INSIGHTS</h1>
+        <h1 className="font-heading text-3xl font-bold tracking-wide">SCHEDULFY INSIGHTS & AI</h1>
         <p className="text-muted-foreground text-sm mt-1">
           {tasks.length > 0 ? ` ${tasks.length} tasks • ${sessions.length} focus sessions` : 'Start adding tasks to see insights!'}
         </p>

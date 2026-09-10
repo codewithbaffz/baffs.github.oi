@@ -1,7 +1,7 @@
 /* eslint-disable unused-imports/no-unused-imports, unused-imports/no-unused-vars */
-import { useEffect, useState } from 'react';
 import { Bell, Zap, AlertTriangle, MessageSquare, UserPlus, CheckSquare, X } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { useNotifications } from '../hooks/useNotifications';
 
 const TYPE_CONFIG = {
   reminder_1day: { icon: Bell, color: 'text-primary', bg: 'bg-primary/10' },
@@ -17,50 +17,7 @@ const TYPE_CONFIG = {
 };
 
 export default function NotificationPanel({ onClose }) {
-  const [notifications, setNotifications] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    loadNotifications();
-  }, []);
-
-  const loadNotifications = async () => {
-    try {
-      const response = await fetch('/api/notifications', {
-        headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` },
-      });
-      if (!response.ok) throw new Error('Failed to load notifications');
-      const data = await response.json();
-      setNotifications(data);
-    } catch {
-      setNotifications([]);
-    }
-    setLoading(false);
-  };
-
-  const markAllRead = async () => {
-    try {
-      await fetch('/api/notifications/read-all', {
-        method: 'PATCH',
-        headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` },
-      });
-      setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
-    } catch {
-      // ignore
-    }
-  };
-
-  const markRead = async (id) => {
-    try {
-      await fetch(`/api/notifications/${id}/read`, {
-        method: 'PATCH',
-        headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` },
-      });
-      setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, is_read: true } : n)));
-    } catch {
-      // ignore
-    }
-  };
+  const { notifications, loading, markRead, markAllRead } = useNotifications();
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
@@ -70,7 +27,7 @@ export default function NotificationPanel({ onClose }) {
           <h2 className="font-heading text-lg font-bold tracking-wide">NOTIFICATIONS</h2>
           <div className="flex items-center gap-2">
             <button
-              onClick={markAllRead}
+              onClick={() => markAllRead()}
               className="text-xs text-muted-foreground hover:text-primary transition-colors flex items-center gap-1"
             >
               <CheckSquare className="w-3 h-3" /> Mark all read
@@ -99,22 +56,19 @@ export default function NotificationPanel({ onClose }) {
               {notifications.map((notif) => {
                 const config = TYPE_CONFIG[notif.type] || TYPE_CONFIG.reminder_1day;
                 const Icon = config.icon;
+                const notifId = notif.id || notif._id;
                 return (
                   <div
-                    key={notif.id || notif._id}
-                    onClick={() => markRead(notif.id)}
+                    key={notifId}
+                    onClick={() => markRead(notifId)}
                     className={`flex gap-3 p-3 rounded-lg cursor-pointer transition-all ${notif.is_read ? 'opacity-60' : 'bg-secondary/50'} hover:bg-secondary`}
                   >
-                    <div
-                      className={`w-8 h-8 rounded-lg ${config.bg} flex items-center justify-center shrink-0`}
-                    >
+                    <div className={`w-8 h-8 rounded-lg ${config.bg} flex items-center justify-center shrink-0`}>
                       <Icon className={`w-4 h-4 ${config.color}`} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-foreground">{notif.title}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
-                        {notif.message}
-                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{notif.message}</p>
                       {notif.actor_name && notif.actor_name !== 'A team member' && (
                         <p className="text-[11px] text-primary/80 mt-1">By {notif.actor_name}</p>
                       )}
