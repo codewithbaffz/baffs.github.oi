@@ -1,4 +1,3 @@
-// backend/src/app.js or index.js
 import dotenv from 'dotenv';
 import express from 'express';
 import mongoose from 'mongoose';
@@ -16,8 +15,26 @@ dotenv.config();
 const app = express();
 
 // Updated CORS configuration
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'http://localhost:3001',
+  process.env.FRONTEND_URL, // e.g. https://baffs-github-oi-schedulfy.vercel.app
+].filter(Boolean);
+
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:3001'],
+  origin: (origin, callback) => {
+    // Allow requests with no origin (e.g. curl, mobile apps, server-to-server)
+    if (!origin) return callback(null, true);
+
+    const isAllowedExact = allowedOrigins.includes(origin);
+    const isVercelPreview = /^https:\/\/baffs-github-oi-schedulfy[a-z0-9-]*\.vercel\.app$/.test(origin);
+
+    if (isAllowedExact || isVercelPreview) {
+      return callback(null, true);
+    }
+    return callback(new Error(`CORS blocked for origin: ${origin}`));
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'x-user-id']
