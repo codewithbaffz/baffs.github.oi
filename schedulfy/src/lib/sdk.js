@@ -18,7 +18,10 @@ async function apiCall(endpoint, options = {}) {
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));
-    throw new Error(error.message || `API Error: ${response.statusText}`);
+    const err = new Error(error.message || `API Error: ${response.statusText}`);
+    err.status = response.status;
+    err.data = error;
+    throw err;
   }
   return response.json();
 }
@@ -374,4 +377,4 @@ export const schedulfySDK = {
 
 // Export both the SDK and individual utilities
 export default schedulfySDK;
-export { apiCall };
+export { apiCall, API_BASE };

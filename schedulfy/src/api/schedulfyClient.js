@@ -1,7 +1,7 @@
 // src/api/schedulfyClient.js
 import schedulfySDK from '../lib/sdk';
 
-const BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 export async function apiFetch(path, opts = {}) {
   const token = localStorage.getItem('authToken');
@@ -12,7 +12,7 @@ export async function apiFetch(path, opts = {}) {
   };
   
   try {
-    const res = await fetch(`${BASE}${path}`, {
+    const res = await fetch(`${API_BASE}${path}`, {
       ...opts,
       headers,
     });

@@ -1,5 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useState, useContext, useEffect, useCallback } from 'react';
+import { schedulfySDK } from '@/lib/sdk';
 
 const AuthContext = createContext();
 
@@ -27,7 +28,7 @@ export const AuthProvider = ({ children }) => {
   // Check if user is authenticated
   const checkUserAuth = useCallback(async () => {
     const token = getToken();
-    
+
     if (!token) {
       setIsAuthenticated(false);
       setUser(null);
@@ -38,41 +39,32 @@ export const AuthProvider = ({ children }) => {
 
     try {
       setIsLoadingAuth(true);
-      
-      const response = await fetch('/api/auth/me', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
 
-      if (!response.ok) {
-        if (response.status === 401 || response.status === 403) {
-          // Token is invalid or expired
-          localStorage.removeItem('authToken');
-          setIsAuthenticated(false);
-          setUser(null);
-          setAuthError({
-            type: 'auth_required',
-            message: 'Session expired. Please login again.'
-          });
-        } else {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-      } else {
-        const userData = await response.json();
-        setUser(userData);
-        setIsAuthenticated(true);
-        setAuthError(null);
-      }
+      const userData = await schedulfySDK.auth.me();
+
+      setUser(userData);
+      setIsAuthenticated(true);
+      setAuthError(null);
     } catch (error) {
       console.error('Auth check failed:', error);
-      setIsAuthenticated(false);
-      setUser(null);
-      setAuthError({
-        type: 'auth_error',
-        message: error.message || 'Authentication failed'
-      });
+
+      if (error.status === 401 || error.status === 403) {
+        // Token is invalid or expired
+        localStorage.removeItem('authToken');
+        setIsAuthenticated(false);
+        setUser(null);
+        setAuthError({
+          type: 'auth_required',
+          message: 'Session expired. Please login again.'
+        });
+      } else {
+        setIsAuthenticated(false);
+        setUser(null);
+        setAuthError({
+          type: 'auth_error',
+          message: error.message || 'Authentication failed'
+        });
+      }
     } finally {
       setIsLoadingAuth(false);
       setAuthChecked(true);
@@ -85,19 +77,7 @@ export const AuthProvider = ({ children }) => {
       setIsLoadingAuth(true);
       setAuthError(null);
 
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Login failed');
-      }
+      const data = await schedulfySDK.auth.login(email, password);
 
       // Store token
       if (data.token) {
@@ -106,7 +86,7 @@ export const AuthProvider = ({ children }) => {
 
       setUser(data.user || data);
       setIsAuthenticated(true);
-      
+
       return { success: true };
     } catch (error) {
       console.error('Login failed:', error);

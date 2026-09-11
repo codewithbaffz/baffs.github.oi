@@ -28,6 +28,7 @@ import {
 import { useAuth } from '@/lib/AuthContext';
 import { useTasks } from '@/context/TaskContext';
 import { useWorkspace } from '@/context/WorkspaceContext';
+import { API_BASE } from '@/lib/sdk';
 
 // Demo data - fallback if no data
 const DEMO_WORKSPACE = {
@@ -84,7 +85,7 @@ export default function Team() {
       setLoading(true);
       const token = localStorage.getItem('authToken');
       
-      const response = await fetch('/api/workspace', {
+      const response = await fetch(`${API_BASE}/workspace`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -96,7 +97,7 @@ export default function Team() {
         if (data && data.length > 0) {
           const workspaceData = data.find((item) => String(item.id || item._id) === String(currentWorkspace?.id || currentWorkspace?._id));
           if (!workspaceData) return;
-          const detailsResponse = await fetch(`/api/workspace/${workspaceData.id}`, {
+          const detailsResponse = await fetch(`${API_BASE}/workspace/${workspaceData.id}`, {
             headers: { 'Authorization': `Bearer ${token}` },
           });
           const details = detailsResponse.ok ? await detailsResponse.json() : workspaceData;
@@ -114,8 +115,8 @@ export default function Team() {
             })));
           }
           const [messagesResponse, meetingsResponse] = await Promise.all([
-            fetch(`/api/workspace/${workspaceData.id}/messages`, { headers: { Authorization: `Bearer ${token}` } }),
-            fetch(`/api/workspace/${workspaceData.id}/meetings`, { headers: { Authorization: `Bearer ${token}` } }),
+            fetch(`${API_BASE}/workspace/${workspaceData.id}/messages`, { headers: { Authorization: `Bearer ${token}` } }),
+            fetch(`${API_BASE}/workspace/${workspaceData.id}/meetings`, { headers: { Authorization: `Bearer ${token}` } }),
           ]);
           if (messagesResponse.ok) setMessages(await messagesResponse.json());
           if (meetingsResponse.ok) setMeetings(await meetingsResponse.json());
@@ -137,7 +138,7 @@ export default function Team() {
     const nextValue = !visibility[key];
     try {
       const token = localStorage.getItem('authToken');
-      const response = await fetch(`/api/workspace/${workspace.id}/settings`, {
+      const response = await fetch(`${API_BASE}/workspace/${workspace.id}/settings`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ [key]: nextValue }),
@@ -156,7 +157,7 @@ export default function Team() {
     setUpdatingMember(memberId);
     try {
       const token = localStorage.getItem('authToken');
-      const response = await fetch(`/api/workspace/${workspace.id}/members/${memberId}`, {
+      const response = await fetch(`${API_BASE}/workspace/${workspace.id}/members/${memberId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -175,7 +176,7 @@ export default function Team() {
     if (isWorkspaceAdmin || !window.confirm('Leave this workspace?')) return;
     try {
       const token = localStorage.getItem('authToken');
-      const response = await fetch(`/api/workspace/${workspace.id}/leave`, {
+      const response = await fetch(`${API_BASE}/workspace/${workspace.id}/leave`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -195,7 +196,7 @@ export default function Team() {
     try {
       const token = localStorage.getItem('authToken');
       
-      const response = await fetch('/api/workspace', {
+      const response = await fetch(`${API_BASE}/workspace`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -230,7 +231,7 @@ export default function Team() {
     setSendingMessage(true);
     try {
       const token = localStorage.getItem('authToken');
-      const response = await fetch(`/api/workspace/${workspace.id}/messages`, {
+      const response = await fetch(`${API_BASE}/workspace/${workspace.id}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ message: messageText, reply_to: replyingTo?.id || replyingTo?._id || null }),
@@ -270,7 +271,7 @@ export default function Team() {
     try {
       const token = localStorage.getItem('authToken');
       const results = await Promise.all(messageIds.map(async (messageId) => {
-        const response = await fetch(`/api/workspace/${workspace.id}/messages/${messageId}`, {
+        const response = await fetch(`${API_BASE}/workspace/${workspace.id}/messages/${messageId}`, {
           method: 'DELETE',
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -293,7 +294,7 @@ export default function Team() {
     setSchedulingMeeting(true);
     try {
       const token = localStorage.getItem('authToken');
-      const response = await fetch(`/api/workspace/${workspace.id}/meetings`, {
+      const response = await fetch(`${API_BASE}/workspace/${workspace.id}/meetings`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify(meetingForm),
@@ -343,7 +344,7 @@ export default function Team() {
       console.log(' Workspace ID:', workspace.id);
 
       // Make API call to send invitation
-      const response = await fetch(`/api/workspace/${workspace.id}/invite`, {
+      const response = await fetch(`${API_BASE}/workspace/${workspace.id}/invite`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
