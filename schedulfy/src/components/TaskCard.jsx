@@ -1,16 +1,7 @@
 import { useState } from 'react';
 import { format, isPast, isToday } from 'date-fns';
-import { 
-  CheckCircle2, 
-  Circle, 
-  Clock, 
-  Tag, 
-  Paperclip, 
-  MessageSquare, 
-  AlertTriangle, 
-  Zap, 
-  ChevronDown 
-} from 'lucide-react';
+
+
 
 const PRIORITY_CONFIG = {
   low: { label: 'Low', color: 'text-green-400', bg: 'bg-green-400/10 border-green-400/20' },

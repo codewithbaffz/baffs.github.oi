@@ -1,11 +1,11 @@
-import { useWorkspace } from '@/context/WorkspaceContext';
-  const { currentWorkspace } = useWorkspace();
-import { useState, useEffect, useCallback } from 'react'; //  Added useCallback
+import { useState, useEffect, useCallback } from 'react';
 import { base44 } from '@/api/base44Client';
 import { format, isPast, isToday } from 'date-fns';
-
-
-
+import { useWorkspace } from '@/context/WorkspaceContext';
+import {
+  Zap, Pencil, Trash2, X, Check, CheckCircle2, Users, UserPlus,
+  Crown, Clock, AlertTriangle, Tag, MessageSquare, Send, Loader2,
+} from 'lucide-react';
 
 const PRIORITY_COLOR = {
   low: 'text-green-400 bg-green-400/10 border-green-400/20',
@@ -14,22 +14,23 @@ const PRIORITY_COLOR = {
   urgent: 'text-destructive bg-destructive/10 border-destructive/20',
 };
 
-const STATUS_LABEL = { 
-  todo: 'To Do', 
-  in_progress: 'In Progress', 
-  done: 'Done', 
-  overdue: 'Overdue', 
-  snoozed: 'Snoozed' 
+const STATUS_LABEL = {
+  todo: 'To Do',
+  in_progress: 'In Progress',
+  done: 'Done',
+  overdue: 'Overdue',
+  snoozed: 'Snoozed',
 };
 
 export default function TaskDetailModal({ task: initialTask, onClose, onUpdate, onDelete }) {
+  const { currentWorkspace } = useWorkspace();
   const [task, setTask] = useState(initialTask);
   const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState({ 
-    title: task.title, 
-    description: task.description || '', 
-    priority: task.priority, 
-    status: task.status, 
+  const [form, setForm] = useState({
+    title: task.title,
+    description: task.description || '',
+    priority: task.priority,
+    status: task.status,
     due_date: task.due_date ? task.due_date.slice(0, 16) : '',
     assignee_id: task.assignee_id || '',
   });
@@ -39,15 +40,14 @@ export default function TaskDetailModal({ task: initialTask, onClose, onUpdate, 
   const [sendingComment, setSendingComment] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [user, setUser] = useState(null);
-  
+
   // Team members state
   const [members, setMembers] = useState([]);
   const [workspace, setWorkspace] = useState(null);
-  const [_loadingMembers, setLoadingMembers] = useState(false); //  Re-added
+  const [_loadingMembers, setLoadingMembers] = useState(false);
   const [showAssign, setShowAssign] = useState(false);
   const [assigning, setAssigning] = useState(false);
 
-  // Fixed: loadComments wrapped in useCallback
   const loadComments = useCallback(async () => {
     try {
       const data = await base44.entities.Comment.filter({ task_id: task.id }, 'created_date', 50);
@@ -57,8 +57,7 @@ export default function TaskDetailModal({ task: initialTask, onClose, onUpdate, 
     }
   }, [task.id]);
 
-  //  Fixed: loadWorkspaceMembers wrapped in useCallback
-  const loadWorkspaceMembers = useCallback(async (user) => {
+  const loadWorkspaceMembers = useCallback(async () => {
     setLoadingMembers(true);
     try {
       const ws = currentWorkspace;
@@ -76,16 +75,14 @@ export default function TaskDetailModal({ task: initialTask, onClose, onUpdate, 
     } finally {
       setLoadingMembers(false);
     }
-  }, []);
   }, [currentWorkspace]);
 
-  //  Fixed: loadData wrapped in useCallback
   const loadData = useCallback(async () => {
     try {
       const u = await base44.auth.me();
       setUser(u);
       await loadComments();
-      await loadWorkspaceMembers(u);
+      await loadWorkspaceMembers();
     } catch (err) {
       console.error('Failed to load data:', err);
     }
@@ -93,7 +90,7 @@ export default function TaskDetailModal({ task: initialTask, onClose, onUpdate, 
 
   useEffect(() => {
     loadData();
-  }, [loadData]); //  Now stable
+  }, [loadData]);
 
   const saveEdit = async () => {
     setSaving(true);
@@ -232,12 +229,12 @@ export default function TaskDetailModal({ task: initialTask, onClose, onUpdate, 
                 <input type="datetime-local" value={form.due_date} onChange={e => setForm(p => ({ ...p, due_date: e.target.value }))}
                   className="bg-secondary/60 border border-border rounded-lg px-2 py-1.5 text-sm text-foreground focus:outline-none focus:border-primary/50" />
               </div>
-              
+
               {/* Assignee dropdown in edit mode */}
               <div>
                 <label className="text-xs text-muted-foreground font-medium">Assign to</label>
-                <select 
-                  value={form.assignee_id} 
+                <select
+                  value={form.assignee_id}
                   onChange={e => setForm(p => ({ ...p, assignee_id: e.target.value }))}
                   className="w-full mt-1 bg-secondary/60 border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary/50"
                 >
@@ -292,7 +289,7 @@ export default function TaskDetailModal({ task: initialTask, onClose, onUpdate, 
                 </div>
                 <div className="flex items-center gap-2">
                   {!showAssign && (
-                    <button 
+                    <button
                       onClick={() => setShowAssign(true)}
                       className="flex items-center gap-1 px-3 py-1.5 text-xs bg-secondary/60 border border-border rounded-lg hover:bg-secondary transition-colors"
                     >
@@ -301,7 +298,7 @@ export default function TaskDetailModal({ task: initialTask, onClose, onUpdate, 
                     </button>
                   )}
                   {currentAssignee && (
-                    <button 
+                    <button
                       onClick={unassignMember}
                       disabled={assigning}
                       className="text-xs text-destructive hover:underline"
@@ -343,7 +340,7 @@ export default function TaskDetailModal({ task: initialTask, onClose, onUpdate, 
                       );
                     })}
                   </div>
-                  <button 
+                  <button
                     onClick={() => setShowAssign(false)}
                     className="mt-2 text-xs text-muted-foreground hover:text-foreground"
                   >

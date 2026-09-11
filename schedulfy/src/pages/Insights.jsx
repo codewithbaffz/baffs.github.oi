@@ -6,20 +6,10 @@ import { Target, Zap, Clock, BarChart2 } from 'lucide-react';
 import { format, subDays, isWithinInterval, startOfDay, endOfDay, getDay } from 'date-fns';
 
 // Import chart components from recharts
-import {
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  PieChart,
-  Pie,
-  Cell
-} from 'recharts';
+
+
 
 // Import InsightChat component
-import InsightChat from '@/components/InsightChat';
 
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const COLORS = ['hsl(248 100% 70%)', 'hsl(191 100% 50%)', 'hsl(160 60% 45%)', 'hsl(43 74% 66%)', 'hsl(0 84% 60%)'];

@@ -1,7 +1,6 @@
 // src/services/aiService.js
 //  Updated to use backend API - NO GROQ API KEY NEEDED
 
-import { schedulfySDK } from '@/lib/sdk';
 
 const AI_API_URL = import.meta.env.VITE_AI_API_URL || 'http://localhost:5000/ai';
 

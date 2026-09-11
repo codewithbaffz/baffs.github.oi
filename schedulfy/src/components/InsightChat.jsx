@@ -1,7 +1,5 @@
 // src/components/InsightChat.jsx
-import React, { useState } from 'react';
-import { Bot, Send, X, MessageCircle, AlertCircle } from 'lucide-react';
-import ReactMarkdown from 'react-markdown';
+import { useState } from 'react';
 import { useAuth } from '@/lib/AuthContext';
 
 const InsightChat = ({ tasks, sessions, onClose }) => {

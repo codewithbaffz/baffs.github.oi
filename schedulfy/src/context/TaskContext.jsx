@@ -1,5 +1,5 @@
 // TaskContext.jsx
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/lib/AuthContext';
 import schedulfySDK from '@/lib/sdk';
 

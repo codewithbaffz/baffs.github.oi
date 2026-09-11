@@ -1,8 +1,6 @@
 // pages/ForgotPassword.jsx
-import React, { useState } from "react";
-import { Link } from "react-router-dom";
-import { Mail, ArrowLeft, Loader2 } from "lucide-react";
-import AuthLayout from "@/components/AuthLayout";
+import { useState } from "react";
+import { Mail } from "lucide-react";
 import { schedulfy } from "@/api/schedulfyClient";
 
 export default function ForgotPassword() {

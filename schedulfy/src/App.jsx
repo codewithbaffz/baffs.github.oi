@@ -1,24 +1,3 @@
-import { Routes, Route, Navigate } from "react-router-dom";
-import { TaskProvider } from "./context/TaskContext";
-import { EventProvider } from "./context/EventContext";
-import { WorkspaceProvider } from "./context/WorkspaceContext";
-import ProtectedRoute from "./components/ProtectedRoute";
-import Layout from "./components/Layout";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
-import Dashboard from "./pages/Dashboard";
-import Tasks from "./pages/Tasks";
-import CalendarPage from "./pages/CalendarPage";
-import Focus from "./pages/Focus";
-import Insights from "./pages/Insights";
-import Projects from "./pages/Projects";
-import Team from "./pages/Team";
-import Settings from "./pages/Settings";
-import Templates from "./pages/Templates";
-import { useAuth } from "./lib/AuthContext";
-import ForgotPassword from './pages/ForgotPassword';
-import ResetPassword from './pages/ResetPassword';
-import AcceptInvitation from './pages/AcceptInvitation';
 
 
 export default function App() {

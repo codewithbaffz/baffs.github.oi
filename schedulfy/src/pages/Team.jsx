@@ -2,28 +2,7 @@ import { useState, useEffect } from 'react';
 import { 
   Users, 
   UserCheck, 
-  CheckSquare, 
-  Briefcase,
-  UserPlus,
-  Crown,
-  Plus,
-  Mail,
-  Send,
-  Loader2,
-  X,
-  CheckCircle,
-  AlertCircle,
-  LogOut,
-  Trash2,
-  Eye,
-  EyeOff,
-  MessageSquare,
-  Video,
-  ExternalLink,
-  CalendarClock,
-  Copy,
-  Reply,
-  ListChecks
+  CheckSquare
 } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 import { useTasks } from '@/context/TaskContext';

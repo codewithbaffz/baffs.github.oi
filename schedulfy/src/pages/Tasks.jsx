@@ -1,10 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, Filter, Sparkles, X, Loader2, Pencil, Trash2, ChevronDown } from 'lucide-react';
 import { useTasks } from '@/context/TaskContext';
 import { useAuth } from '@/lib/AuthContext';
 import { useWorkspace } from '@/context/WorkspaceContext';
-import TaskCard from '@/components/TaskCard';
-import NLPTaskInput from '@/components/NLPTaskInput';
 
 const FILTERS = ['all', 'todo', 'in_progress', 'done', 'overdue', 'snoozed'];
 const PRIORITIES = ['all', 'urgent', 'high', 'medium', 'low'];

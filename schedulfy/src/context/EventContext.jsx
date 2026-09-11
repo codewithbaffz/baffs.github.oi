@@ -1,5 +1,5 @@
 // EventContext.jsx
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { useAuth } from '../lib/AuthContext';
 import { apiCall } from '../lib/sdk';
 

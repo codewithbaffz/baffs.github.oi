@@ -1,9 +1,8 @@
 // pages/Register.jsx
 import React, { useState, useRef } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/AuthContext";
-import { Mail, Lock, Loader2, UserPlus, User, Eye, EyeOff } from "lucide-react";
-import AuthLayout from "@/components/AuthLayout";
+import { Mail, UserPlus } from "lucide-react";
 import schedulfySDK from "@/lib/sdk";
 
 // Google Icon Component

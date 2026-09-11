@@ -1,23 +1,7 @@
 // CalendarPage.jsx
-import React, { useState, useEffect } from 'react';
-import { 
-  ChevronLeft, 
-  ChevronRight, 
-  Plus, 
-  Calendar,
-  Clock,
-  X,
-  AlertCircle,
-  Sparkles,
-  Loader2,
-  Check,
-  PlusCircle,
-  ListTodo,
-  Calendar as CalendarIcon,
-  Flag,
-  Trash2,
-  Edit2
-} from 'lucide-react';
+import { useState } from 'react';
+
+
 import { 
   format, 
   startOfMonth, 
@@ -31,8 +15,7 @@ import {
   addMonths,
   subMonths,
   addWeeks,
-  subWeeks,
-  parseISO
+  subWeeks
 } from 'date-fns';
 import { useEvents } from '@/context/EventContext';
 import { useTasks } from '@/context/TaskContext';

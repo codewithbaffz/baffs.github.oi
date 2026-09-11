@@ -1,21 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Link } from 'react-router-dom';
 import { 
   CheckCircle2, 
   Clock, 
   AlertTriangle, 
-  Timer, 
-  Sparkles,
-  Target,
-  ArrowRight,
-  Zap,
-  TrendingUp,
-  Plus
+  Timer
 } from 'lucide-react';
 import { format, isToday, isPast, endOfDay } from 'date-fns';
 import { useTasks } from '@/context/TaskContext';
-import TaskCard from '@/components/TaskCard';
-import NLPTaskInput from '@/components/NLPTaskInput';
 
 export default function Dashboard() {
   const { tasks, loading, createTask, updateTask, deleteTask, fetchTasks } = useTasks();

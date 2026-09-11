@@ -2,13 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { 
   Timer, 
   Coffee, 
-  Zap, 
-  RotateCcw,
-  Play,
-  Pause,
-  Clock,
-  CheckCircle2,
-  Settings
+  Zap
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useTasks } from '@/context/TaskContext'; // Import your TaskContext

@@ -1,8 +1,7 @@
 // pages/ResetPassword.jsx
 import { useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
-import { Lock, Loader2, AlertTriangle, Eye, EyeOff } from "lucide-react";
-import AuthLayout from "@/components/AuthLayout";
+import { useSearchParams } from "react-router-dom";
+import { Lock, AlertTriangle } from "lucide-react";
 import { schedulfy } from "@/api/schedulfyClient";
 
 export default function ResetPassword() {

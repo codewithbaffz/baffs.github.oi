@@ -1,10 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/lib/AuthContext.jsx';
 import { schedulfy } from '@/api/schedulfyClient';
-import { 
-  Loader2, Camera, Shield, User, Zap, Clock, Bell, 
-  Mail, Copy, CheckCircle2, LinkIcon, Settings as SettingsIcon, Eye, EyeOff
-} from 'lucide-react';
+
+
 
 //  Google Calendar Icon Component
 const GoogleCalendarIcon = ({ className = "w-5 h-5" }) => (

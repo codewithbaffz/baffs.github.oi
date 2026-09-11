@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useSearchParams, useNavigate } from 'react-router-dom';
-import { CheckCircle, Loader2, Users } from 'lucide-react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/lib/AuthContext';
 import { API_BASE } from '@/lib/sdk';
 

@@ -6,14 +6,7 @@ import { useTasks } from '@/context/TaskContext';
 import { useAuth } from '@/lib/AuthContext';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { API_BASE } from '@/lib/sdk';
-import { 
-  Plus, Trash2, X, Sparkles, CheckSquare, Clock, ChevronRight, 
-  Filter, Loader2, FolderOpen, Users, UserPlus, User, 
-  ChevronDown, Check, Calendar as CalendarIcon, Flag, Send,
-  UserCheck
-} from 'lucide-react';
-import TaskCard from '@/components/TaskCard';
-import NLPTaskInput from '@/components/NLPTaskInput';
+
 
 const STATUS_COLOR = {
   active: 'text-green-400 bg-green-400/10 border-green-400/20',
