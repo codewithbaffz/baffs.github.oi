@@ -4,19 +4,10 @@
     {
       "src": "schedufly/package.json",
       "use": "@vercel/static-build",
-      "config": {
-        "distDir": "dist"
-      }
+      "config": { "distDir": "dist" }
     }
   ],
   "rewrites": [
-    {
-      "source": "/api/(.*)",
-      "destination": "/api/$1"
-    },
-    {
-      "source": "/((?!api/.*).*)",
-      "destination": "/schedufly/dist/index.html"
-    }
+    { "source": "/((?!api/.*).*)", "destination": "/schedufly/dist/index.html" }
   ]
 }
