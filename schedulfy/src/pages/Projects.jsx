@@ -5,6 +5,7 @@ import { isPast } from 'date-fns';
 import { useTasks } from '@/context/TaskContext';
 import { useAuth } from '@/lib/AuthContext';
 import { useWorkspace } from '@/context/WorkspaceContext';
+import { API_BASE } from '@/lib/sdk';
 import { 
   Plus, Trash2, X, Sparkles, CheckSquare, Clock, ChevronRight, 
   Filter, Loader2, FolderOpen, Users, UserPlus, User, 
@@ -84,7 +85,7 @@ export default function Projects() {
     try {
       if (!currentWorkspace) return;
 
-      const detailsResponse = await fetch(`/api/workspace/${currentWorkspace.id || currentWorkspace._id}`, {
+      const detailsResponse = await fetch(`${API_BASE}/workspace/${currentWorkspace.id || currentWorkspace._id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const details = detailsResponse.ok ? await detailsResponse.json() : currentWorkspace;
@@ -123,7 +124,7 @@ export default function Projects() {
         return;
       }
 
-      const response = await fetch('/api/projects', {
+      const response = await fetch(`${API_BASE}/projects`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -206,7 +207,7 @@ export default function Projects() {
         status: 'active',
       };
 
-      const response = await fetch('/api/projects', {
+      const response = await fetch(`${API_BASE}/projects`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -262,7 +263,7 @@ export default function Projects() {
     try {
       const token = localStorage.getItem('authToken');
       if (token) {
-        const response = await fetch(`/api/projects/${id}`, {
+        const response = await fetch(`${API_BASE}/projects/${id}`, {
           method: 'DELETE',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -293,7 +294,7 @@ export default function Projects() {
     try {
       const token = localStorage.getItem('authToken');
       if (token) {
-        const response = await fetch(`/api/projects/${projectId}`, {
+        const response = await fetch(`${API_BASE}/projects/${projectId}`, {
           method: 'PATCH',
           headers: {
             'Authorization': `Bearer ${token}`,

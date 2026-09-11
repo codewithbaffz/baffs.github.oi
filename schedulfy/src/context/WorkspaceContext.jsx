@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { useAuth } from '@/lib/AuthContext';
+import { API_BASE } from '@/lib/sdk';
 
 const WorkspaceContext = createContext(null);
 const SELECTED_WORKSPACE_KEY = 'selectedWorkspaceId';
@@ -21,7 +22,7 @@ export function WorkspaceProvider({ children }) {
     setLoading(true);
     try {
       const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/workspace', {
+      const response = await fetch(`${API_BASE}/workspace`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!response.ok) throw new Error('Failed to load workspaces');

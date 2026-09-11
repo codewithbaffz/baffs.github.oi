@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { CheckCircle, Loader2, Users } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
+import { API_BASE } from '@/lib/sdk';
 
 export default function AcceptInvitation() {
   const [searchParams] = useSearchParams();
@@ -18,7 +19,7 @@ export default function AcceptInvitation() {
     const acceptInvitation = async () => {
       setStatus('loading');
       try {
-        const response = await fetch('/api/workspace/accept-invite', {
+        const response = await fetch(`${API_BASE}/workspace/accept-invite`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

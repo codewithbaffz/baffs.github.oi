@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
+import { API_BASE } from '@/lib/sdk';
 
 export function useNotifications() {
   const [notifications, setNotifications] = useState([]);
@@ -6,7 +7,7 @@ export function useNotifications() {
 
   const loadNotifications = useCallback(async () => {
     try {
-      const response = await fetch('/api/notifications', {
+      const response = await fetch(`${API_BASE}/notifications`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` },
       });
       if (!response.ok) throw new Error('Failed to load notifications');
@@ -24,7 +25,7 @@ export function useNotifications() {
 
   const markRead = useCallback(async (id) => {
     try {
-      await fetch(`/api/notifications/${id}/read`, {
+      await fetch(`${API_BASE}/notifications/${id}/read`, {
         method: 'PATCH',
         headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` },
       });
@@ -38,7 +39,7 @@ export function useNotifications() {
 
   const markAllRead = useCallback(async () => {
     try {
-      await fetch('/api/notifications/read-all', {
+      await fetch(`${API_BASE}/notifications/read-all`, {
         method: 'PATCH',
         headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` },
       });
