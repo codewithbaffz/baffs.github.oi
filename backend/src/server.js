@@ -11,8 +11,6 @@ import workspaceRoutes from './Routes/workspace.js';
 import aiRoutes from './Routes/aiRoutes.js';
 import notificationRoutes from './Routes/notifications.js';
 
-
-
 const app = express();
 
 // Updated CORS configuration
@@ -20,7 +18,11 @@ const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5173',
   'http://localhost:3001',
-  process.env.FRONTEND_URL, // e.g. https://baffs-github-oi-schedulfy.vercel.app
+  // FIX: Added your custom domains here
+  'https://schedulfy.org',
+  'https://www.schedulfy.org',
+  'https://baffs-github-oi-schedulfy.vercel.app',
+  process.env.FRONTEND_URL, // Optional: can still be set in Render's environment variables
 ].filter(Boolean);
 
 app.use(cors({
@@ -29,6 +31,7 @@ app.use(cors({
     if (!origin) return callback(null, true);
 
     const isAllowedExact = allowedOrigins.includes(origin);
+    // Check for Vercel preview deployments (e.g., baffs-github-oi-schedulfy-abc123.vercel.app)
     const isVercelPreview = /^https:\/\/baffs-github-oi-schedulfy[a-z0-9-]*\.vercel\.app$/.test(origin);
 
     if (isAllowedExact || isVercelPreview) {
@@ -49,7 +52,7 @@ app.use('/api/events', eventRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/workspace', workspaceRoutes);
-app.use('/api/ai', aiRoutes); //  FIXED: Added /api prefix
+app.use('/api/ai', aiRoutes); 
 app.use('/api/notifications', notificationRoutes);
 
 // Test route
@@ -125,7 +128,7 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/productiv
       console.log(`   Test: http://localhost:${PORT}/api/test`);
       console.log(`   Auth: http://localhost:${PORT}/api/auth`);
       console.log(`   Tasks: http://localhost:${PORT}/api/tasks`);
-      console.log(`   AI: http://localhost:${PORT}/api/ai/command`); //  Now matches frontend
+      console.log(`   AI: http://localhost:${PORT}/api/ai/command`); 
     });
   })
   .catch(err => {
