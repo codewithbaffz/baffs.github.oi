@@ -108,19 +108,21 @@ body,
 @layer utilities {
   .glass {
     background: rgba(255, 255, 255, 0.04);
-    backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
     border: 1px solid rgba(255, 255, 255, 0.08);
   }
   
   .glass-cyan {
     background: rgba(0, 212, 255, 0.05);
+    -webkit-backdrop-filter: blur(12px);
     backdrop-filter: blur(12px);
     border: 1px solid rgba(0, 212, 255, 0.15);
   }
   
   .glass-indigo {
     background: rgba(108, 99, 255, 0.08);
+    -webkit-backdrop-filter: blur(12px);
     backdrop-filter: blur(12px);
     border: 1px solid rgba(108, 99, 255, 0.2);
   }
