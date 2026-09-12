@@ -8,6 +8,7 @@ html,
 body,
 #root {
   height: 100%;
+  height: 100dvh;
   overflow: hidden;
 }
 
@@ -152,6 +153,11 @@ body,
     border-color: hsl(var(--cyan));
   }
   
+  .scrollbar-thin {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+  }
+
   .scrollbar-thin::-webkit-scrollbar {
     width: 4px;
   }
@@ -218,4 +224,4 @@ body,
 
 .text-sidebar-foreground {
   color: hsl(var(--sidebar-foreground));
-}
+} 
