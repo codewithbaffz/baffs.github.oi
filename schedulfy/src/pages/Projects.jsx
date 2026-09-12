@@ -6,25 +6,12 @@ import { useTasks } from '@/context/TaskContext';
 import { useAuth } from '@/lib/AuthContext';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { API_BASE } from '@/lib/sdk';
-
 import { 
-  Users, 
-  X, 
-  UserCheck, 
-  Check, 
-  Plus, 
-  Loader2, 
-  FolderOpen, 
-  ChevronRight, 
-  CheckSquare, 
-  Clock, 
-  Trash2, 
-  Filter, 
-  Sparkles, 
-  Send, 
-  UserPlus 
+  Plus, Trash2, X, Sparkles, CheckSquare, Clock, ChevronRight, ArrowLeft,
+  Filter, Loader2, FolderOpen, Users, UserPlus, User, 
+  ChevronDown, Check, Calendar as CalendarIcon, Flag, Send,
+  UserCheck
 } from 'lucide-react';
-
 import TaskCard from '@/components/TaskCard';
 import NLPTaskInput from '@/components/NLPTaskInput';
 
@@ -231,6 +218,7 @@ export default function Projects() {
           (project) => !project.workspace_id || String(project.workspace_id) === String(workspaceId)
         );
         if (scopedProjects.length > 0) {
+          // Filter out projects without valid IDs
           const validProjects = scopedProjects.filter(p => p && p.id);
           if (validProjects.length > 0) {
             setProjects(validProjects);
@@ -291,6 +279,7 @@ export default function Projects() {
 
   // Handle project selection with validation
   const handleProjectSelect = (project) => {
+    // Validate project
     if (!project || typeof project !== 'object') {
       console.error('Invalid project:', project);
       return;
@@ -707,7 +696,10 @@ export default function Projects() {
   return (
     <div className="flex h-full overflow-hidden">
       {/* Projects List */}
-      <div className={`flex flex-col border-r border-border bg-card/30 transition-all ${selectedProject ? 'w-80 shrink-0' : 'flex-1'}`}>
+      <div
+        className={`flex-col border-r border-border bg-card/30 transition-all
+          ${selectedProject ? 'hidden md:flex md:w-80 md:shrink-0' : 'flex w-full md:flex-1'}`}
+      >
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <h1 className="font-heading text-xl font-bold tracking-wide">PROJECTS</h1>
           <button onClick={() => setShowCreate(!showCreate)} className="flex items-center gap-2 px-3 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-semibold hover:bg-primary/90 transition-all">
@@ -752,6 +744,7 @@ export default function Projects() {
             </div>
           ) : (
             projects.map(proj => {
+              // Skip rendering if project doesn't have a valid ID
               if (!proj || !proj.id) {
                 console.warn('Skipping project with no id:', proj);
                 return null;
@@ -806,17 +799,24 @@ export default function Projects() {
 
       {/* Project Detail */}
       {selectedProject && selectedProject.id && (
-        <div className="flex-1 flex flex-col overflow-hidden animate-fade-in">
-          <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-card/30">
-            <div className="flex items-center gap-3">
-              <div className="w-4 h-4 rounded-full" style={{ backgroundColor: selectedProject.color || '#6C63FF' }} />
-              <div>
-                <h2 className="font-heading text-xl font-bold tracking-wide">{selectedProject.name || 'Unnamed'}</h2>
-                {selectedProject.description && <p className="text-xs text-muted-foreground">{selectedProject.description}</p>}
+        <div className="flex w-full md:flex-1 flex-col overflow-hidden animate-fade-in">
+          <div className="flex items-center justify-between px-4 md:px-6 py-4 border-b border-border bg-card/30">
+            <div className="flex items-center gap-3 min-w-0">
+              <button
+                onClick={() => setSelectedProject(null)}
+                className="p-2 -ml-2 rounded-lg hover:bg-secondary transition-colors md:hidden shrink-0"
+                aria-label="Back to projects"
+              >
+                <ArrowLeft className="w-5 h-5 text-muted-foreground" />
+              </button>
+              <div className="w-4 h-4 rounded-full shrink-0" style={{ backgroundColor: selectedProject.color || '#6C63FF' }} />
+              <div className="min-w-0">
+                <h2 className="font-heading text-xl font-bold tracking-wide truncate">{selectedProject.name || 'Unnamed'}</h2>
+                {selectedProject.description && <p className="text-xs text-muted-foreground truncate">{selectedProject.description}</p>}
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-secondary/30 border border-border">
+            <div className="flex items-center gap-2 shrink-0">
+              <div className="hidden sm:flex items-center gap-1 px-2 py-1 rounded-lg bg-secondary/30 border border-border">
                 <Users className="w-3.5 h-3.5 text-muted-foreground" />
                 <div className="flex -space-x-1.5">
                   {teamMembers.slice(0, 3).map(member => (
@@ -846,30 +846,33 @@ export default function Projects() {
                 <option value="completed">Completed</option>
                 <option value="archived">Archived</option>
               </select>
-              <button onClick={() => setShowAddTask(!showAddTask)} className="flex items-center gap-2 px-3 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-semibold hover:bg-primary/90 transition-all">
+              <button onClick={() => setShowAddTask(!showAddTask)} className="hidden sm:flex items-center gap-2 px-3 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-semibold hover:bg-primary/90 transition-all">
                 <Plus className="w-4 h-4" /> Add Task
+              </button>
+              <button onClick={() => setShowAddTask(!showAddTask)} className="sm:hidden p-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-all" aria-label="Add task">
+                <Plus className="w-4 h-4" />
               </button>
               <button onClick={() => deleteProject(selectedProject.id)} className="p-2 rounded-lg hover:bg-destructive/10 transition-colors">
                 <Trash2 className="w-4 h-4 text-destructive" />
               </button>
-              <button onClick={() => setSelectedProject(null)} className="p-2 rounded-lg hover:bg-secondary transition-colors">
+              <button onClick={() => setSelectedProject(null)} className="hidden md:flex p-2 rounded-lg hover:bg-secondary transition-colors">
                 <X className="w-4 h-4 text-muted-foreground" />
               </button>
             </div>
           </div>
 
           {stats && (
-            <div className="flex items-center gap-4 px-6 py-2 border-b border-border bg-secondary/20 text-xs">
-              <span className="font-medium">Stats:</span>
-              <span className="text-muted-foreground">Total: <span className="text-foreground font-semibold">{stats.total}</span></span>
-              <span className="text-yellow-400">Todo: {stats.todo}</span>
-              <span className="text-blue-400">In Progress: {stats.inProgress}</span>
-              <span className="text-green-400">Done: {stats.done}</span>
-              {stats.overdue > 0 && <span className="text-destructive">Overdue: {stats.overdue}</span>}
+            <div className="flex items-center gap-3 md:gap-4 px-4 md:px-6 py-2 border-b border-border bg-secondary/20 text-xs overflow-x-auto">
+              <span className="font-medium shrink-0">Stats:</span>
+              <span className="text-muted-foreground shrink-0">Total: <span className="text-foreground font-semibold">{stats.total}</span></span>
+              <span className="text-yellow-400 shrink-0">Todo: {stats.todo}</span>
+              <span className="text-blue-400 shrink-0">In Progress: {stats.inProgress}</span>
+              <span className="text-green-400 shrink-0">Done: {stats.done}</span>
+              {stats.overdue > 0 && <span className="text-destructive shrink-0">Overdue: {stats.overdue}</span>}
             </div>
           )}
 
-          <div className="flex items-center gap-3 px-6 py-3 border-b border-border bg-card/20 flex-wrap">
+          <div className="flex items-center gap-3 px-4 md:px-6 py-3 border-b border-border bg-card/20 flex-wrap">
             <div className="relative flex-1 min-w-48">
               <input
                 placeholder="Search tasks..."
@@ -926,7 +929,7 @@ export default function Projects() {
 
           {/* Add Task Section */}
           {showAddTask && (
-            <div className="px-6 py-4 border-b border-border bg-card/20 animate-fade-in space-y-4">
+            <div className="px-4 md:px-6 py-4 border-b border-border bg-card/20 animate-fade-in space-y-4">
               <div>
                 <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
                   <Sparkles className="w-3 h-3 text-cyan" />
@@ -946,7 +949,7 @@ export default function Projects() {
                   Manual Task Creation
                 </p>
                 <div className="space-y-3">
-                  <div className="flex gap-2">
+                  <div className="flex flex-col sm:flex-row gap-2">
                     <input
                       type="text"
                       placeholder="Task title *"
@@ -966,7 +969,7 @@ export default function Projects() {
                     </select>
                   </div>
                   
-                  <div className="flex gap-2">
+                  <div className="flex flex-col sm:flex-row gap-2">
                     <input
                       type="text"
                       placeholder="Description (optional)"
@@ -982,7 +985,7 @@ export default function Projects() {
                     />
                   </div>
                   
-                  <div className="flex gap-2">
+                  <div className="flex flex-col sm:flex-row gap-2">
                     <select
                       value={manualTaskAssignee}
                       onChange={(e) => setManualTaskAssignee(e.target.value)}
@@ -998,7 +1001,7 @@ export default function Projects() {
                     <button
                       onClick={handleManualTaskCreate}
                       disabled={isManualCreating || !manualTaskTitle.trim()}
-                      className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-semibold hover:bg-primary/90 disabled:opacity-50 transition-colors"
+                      className="flex items-center justify-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-semibold hover:bg-primary/90 disabled:opacity-50 transition-colors"
                     >
                       {isManualCreating ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
@@ -1026,7 +1029,7 @@ export default function Projects() {
             </div>
           )}
 
-          <div className="flex-1 overflow-y-auto scrollbar-thin p-6">
+          <div className="flex-1 overflow-y-auto scrollbar-thin p-4 md:p-6">
             {isLoading ? (
               <div className="flex items-center justify-center py-20">
                 <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
@@ -1089,7 +1092,7 @@ export default function Projects() {
       )}
 
       {!selectedProject && !loading && projects.length > 0 && (
-        <div className="flex-1 flex items-center justify-center text-center">
+        <div className="hidden md:flex flex-1 items-center justify-center text-center">
           <div>
             <FolderOpen className="w-16 h-16 text-muted-foreground/20 mx-auto mb-4" />
             <p className="text-muted-foreground">Select a project to view its tasks</p>
