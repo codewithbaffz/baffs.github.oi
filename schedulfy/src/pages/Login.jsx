@@ -1,6 +1,9 @@
 // pages/Login.jsx
 import { useState, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+// FIX: Removed Link from lucide-react, added missing EyeOff icon
+import { Sparkles, Mail, Eye, EyeOff, Loader2, Lock as LockIcon } from 'lucide-react';
+// FIX: Added Link to react-router-dom
+import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/lib/AuthContext';
 
 export default function Login() {
@@ -151,7 +154,7 @@ export default function Login() {
                   </Link>
                 </div>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                  <LockIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                   <input
                     id="password"
                     type={showPassword ? 'text' : 'password'}
@@ -181,7 +184,7 @@ export default function Login() {
                 {loading ? (
                   <><Loader2 className="w-4 h-4 animate-spin" /> Logging in...</>
                 ) : (
-                  <><Lock className="w-4 h-4" /> Log in</>
+                  <><LockIcon className="w-4 h-4" /> Log in</>
                 )}
               </button>
             </form>

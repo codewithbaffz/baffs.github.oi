@@ -3,7 +3,16 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/lib/AuthContext';
 import { schedulfySDK } from '@/lib/sdk';
 import { addDays } from 'date-fns';
-
+import { 
+  Plus, 
+  Loader2, 
+  FileText, 
+  Sparkles, 
+  ChevronUp, 
+  ChevronDown, 
+  Clock, 
+  Play 
+} from 'lucide-react';
 
 
 const DEFAULT_TEMPLATES = [

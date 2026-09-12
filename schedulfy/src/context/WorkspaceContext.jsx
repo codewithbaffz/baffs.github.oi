@@ -13,6 +13,7 @@ export function WorkspaceProvider({ children }) {
   );
   const [loading, setLoading] = useState(false);
 
+  // FIX: Removed currentWorkspaceId from dependencies by using a functional state update inside
   const fetchWorkspaces = useCallback(async () => {
     if (!isAuthenticated || !user) {
       setWorkspaces([]);
@@ -31,19 +32,23 @@ export function WorkspaceProvider({ children }) {
       const nextWorkspaces = Array.isArray(data) ? data : [];
       setWorkspaces(nextWorkspaces);
 
-      const storedWorkspaceExists = nextWorkspaces.some(
-        (workspace) => String(workspace.id || workspace._id) === String(currentWorkspaceId)
-      );
-      if (!storedWorkspaceExists && nextWorkspaces[0]) {
-        setCurrentWorkspaceId(String(nextWorkspaces[0].id || nextWorkspaces[0]._id));
-      }
+      // FIX: Use functional update to avoid needing currentWorkspaceId in dependencies
+      setCurrentWorkspaceId((prevId) => {
+        const storedWorkspaceExists = nextWorkspaces.some(
+          (workspace) => String(workspace.id || workspace._id) === String(prevId)
+        );
+        if (!storedWorkspaceExists && nextWorkspaces[0]) {
+          return String(nextWorkspaces[0].id || nextWorkspaces[0]._id);
+        }
+        return prevId;
+      });
     } catch (error) {
       console.error('Failed to load workspaces:', error);
       setWorkspaces([]);
     } finally {
       setLoading(false);
     }
-  }, [currentWorkspaceId, isAuthenticated, user]);
+  }, [isAuthenticated, user]); // FIX: Removed currentWorkspaceId
 
   useEffect(() => {
     fetchWorkspaces();

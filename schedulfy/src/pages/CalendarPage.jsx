@@ -1,6 +1,22 @@
 // CalendarPage.jsx
 import { useState } from 'react';
 
+import { 
+  ChevronLeft, 
+  ChevronRight, 
+  Plus, 
+  Loader2, 
+  Check, 
+  X, 
+  PlusCircle, 
+  ListTodo, 
+  Calendar, 
+  CalendarIcon, 
+  Clock, 
+  Edit2, 
+  Trash2, 
+  Flag 
+} from 'lucide-react';
 
 import { 
   format, 

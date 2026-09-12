@@ -56,7 +56,7 @@ router.get('/', authenticate, async (req, res) => {
 router.post('/', authenticate, async (req, res) => {
   try {
     const { name, description } = req.body;
-    
+
     if (!name?.trim()) return res.status(400).json({ message: 'Workspace name is required' });
 
     const workspace = await Workspace.create({
@@ -80,7 +80,7 @@ router.post('/:workspaceId/invite', authenticate, async (req, res) => {
   console.log(' Email:', req.body?.email);
   console.log(' Workspace ID:', req.params.workspaceId);
   console.log(' User ID:', req.userId);
-  
+
   try {
     const { workspaceId } = req.params;
     const email = req.body?.email?.trim().toLowerCase();
@@ -89,8 +89,8 @@ router.post('/:workspaceId/invite', authenticate, async (req, res) => {
     // Validate inputs
     if (!email) {
       console.log(' No email provided');
-      return res.status(400).json({ 
-        message: 'Email is required' 
+      return res.status(400).json({
+        message: 'Email is required'
       });
     }
 
@@ -106,8 +106,8 @@ router.post('/:workspaceId/invite', authenticate, async (req, res) => {
 
     if (!workspaceId) {
       console.log(' No workspace ID provided');
-      return res.status(400).json({ 
-        message: 'Workspace ID is required' 
+      return res.status(400).json({
+        message: 'Workspace ID is required'
       });
     }
 
@@ -127,7 +127,7 @@ router.post('/:workspaceId/invite', authenticate, async (req, res) => {
     const inviteToken = generateInviteToken();
     console.log(' Generated token:', inviteToken);
 
-    // Send the invitation through the configured SMTP provider.
+    // Send the invitation through the configured email provider.
     await sendInvitationEmail({
       email,
       workspaceName: workspace.name,
@@ -156,7 +156,7 @@ router.post('/:workspaceId/invite', authenticate, async (req, res) => {
     });
   } catch (error) {
     console.error(' Error sending invitation:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       message: error.message || 'Failed to send invitation'
     });
   }
@@ -169,8 +169,8 @@ router.post('/accept-invite', authenticate, async (req, res) => {
     const userId = req.userId;
 
     if (!token || !userId) {
-      return res.status(400).json({ 
-        message: 'Token and userId are required' 
+      return res.status(400).json({
+        message: 'Token and userId are required'
       });
     }
 
@@ -215,7 +215,7 @@ router.post('/accept-invite', authenticate, async (req, res) => {
     });
   } catch (error) {
     console.error('Error accepting invitation:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       message: error.message || 'Failed to accept invitation'
     });
   }
@@ -374,7 +374,7 @@ router.delete('/:workspaceId/messages/:messageId', authenticate, async (req, res
   }
 });
 
-// Save an external Zoom scheduling link for the workspace team.
+// Load upcoming team meetings for a workspace member.
 router.get('/:workspaceId/meetings', authenticate, async (req, res) => {
   try {
     const workspace = await Workspace.findOne({ _id: req.params.workspaceId, member_ids: req.userId }).select('_id');
@@ -389,6 +389,7 @@ router.get('/:workspaceId/meetings', authenticate, async (req, res) => {
   }
 });
 
+// Schedule a team meeting.
 router.post('/:workspaceId/meetings', authenticate, async (req, res) => {
   try {
     const { title, starts_at: startsAt, duration_minutes: durationMinutes } = req.body || {};
@@ -410,6 +411,26 @@ router.post('/:workspaceId/meetings', authenticate, async (req, res) => {
     res.status(201).json({ ...meeting.toObject(), id: meeting._id });
   } catch (error) {
     res.status(400).json({ message: 'Failed to schedule team meeting' });
+  }
+});
+
+// Delete a team meeting. Creator or workspace admin can delete.
+router.delete('/:workspaceId/meetings/:meetingId', authenticate, async (req, res) => {
+  try {
+    const workspace = await Workspace.findOne({ _id: req.params.workspaceId, member_ids: req.userId }).select('admin_id');
+    if (!workspace) return res.status(403).json({ message: 'You are not a member of this workspace' });
+
+    const meeting = await TeamMeeting.findOne({ _id: req.params.meetingId, workspace_id: req.params.workspaceId });
+    if (!meeting) return res.status(404).json({ message: 'Meeting not found' });
+
+    if (meeting.created_by !== req.userId && workspace.admin_id !== req.userId) {
+      return res.status(403).json({ message: 'You can only delete meetings you created' });
+    }
+
+    await TeamMeeting.deleteOne({ _id: meeting._id });
+    res.json({ success: true, id: meeting._id });
+  } catch (error) {
+    res.status(400).json({ message: 'Failed to delete meeting' });
   }
 });
 

@@ -7,6 +7,26 @@ import { useAuth } from '@/lib/AuthContext';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { API_BASE } from '@/lib/sdk';
 
+import { 
+  Users, 
+  X, 
+  UserCheck, 
+  Check, 
+  Plus, 
+  Loader2, 
+  FolderOpen, 
+  ChevronRight, 
+  CheckSquare, 
+  Clock, 
+  Trash2, 
+  Filter, 
+  Sparkles, 
+  Send, 
+  UserPlus 
+} from 'lucide-react';
+
+import TaskCard from '@/components/TaskCard';
+import NLPTaskInput from '@/components/NLPTaskInput';
 
 const STATUS_COLOR = {
   active: 'text-green-400 bg-green-400/10 border-green-400/20',
@@ -36,6 +56,115 @@ const DEMO_PROJECTS = [
 // View options for tasks
 const VIEW_OPTIONS = ['All', 'Todo', 'In Progress', 'Done', 'Overdue'];
 const SORT_OPTIONS = ['Due Date', 'Priority', 'Created Date'];
+
+// FIX: Moved AssignModal outside the Projects component to prevent re-creation on every render
+const AssignModal = ({ 
+  selectedTaskForAssign, 
+  setShowAssignModal, 
+  setSelectedTaskForAssign, 
+  teamMembers, 
+  getTasksForMember, 
+  assignTaskToMember, 
+  unassignTask, 
+  getTaskId 
+}) => {
+  if (!selectedTaskForAssign) return null;
+  
+  const currentAssignee = selectedTaskForAssign.assignee_id;
+  const currentAssigneeName = selectedTaskForAssign.assignee_name;
+  
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+      <div className="glass rounded-xl max-w-md w-full p-6 border border-border animate-fade-in">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
+            <Users className="w-5 h-5 text-primary" />
+            Assign Task
+          </h2>
+          <button
+            onClick={() => {
+              setShowAssignModal(false);
+              setSelectedTaskForAssign(null);
+            }}
+            className="p-1 hover:bg-secondary/60 rounded-lg transition-colors"
+          >
+            <X className="w-5 h-5 text-foreground" />
+          </button>
+        </div>
+        
+        <p className="text-sm text-muted-foreground mb-4">
+          Assign "{selectedTaskForAssign.title}" to a team member
+        </p>
+        
+        {currentAssignee && currentAssigneeName && (
+          <div className="mb-4 p-3 rounded-lg bg-primary/10 border border-primary/20 flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+              <UserCheck className="w-4 h-4 text-primary" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Currently assigned to</p>
+              <p className="text-sm font-medium text-foreground">{currentAssigneeName}</p>
+            </div>
+          </div>
+        )}
+        
+        <div className="space-y-2 max-h-64 overflow-y-auto">
+          {teamMembers.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <Users className="w-8 h-8 mx-auto mb-2 opacity-30" />
+              <p className="text-sm">No team members available</p>
+              <p className="text-xs">Add team members to assign tasks</p>
+            </div>
+          ) : (
+            teamMembers.map(member => {
+              const isAssigned = currentAssignee === member.id;
+              const taskCount = getTasksForMember(member.id).length;
+              
+              return (
+                <button
+                  key={`assign-${member.id}`}
+                  onClick={() => assignTaskToMember(getTaskId(selectedTaskForAssign), member.id)}
+                  className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-all ${
+                    isAssigned 
+                      ? 'border-primary/50 bg-primary/10' 
+                      : 'border-border hover:border-primary/30 hover:bg-secondary/30'
+                  }`}
+                >
+                  <img 
+                    src={member.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(member.name)}&background=6C63FF&color=fff`} 
+                    alt={member.name} 
+                    className="w-10 h-10 rounded-full object-cover"
+                  />
+                  <div className="flex-1 text-left">
+                    <p className="text-sm font-medium text-foreground">{member.name}</p>
+                    <p className="text-xs text-muted-foreground">{member.email || 'No email'}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">{taskCount} tasks</span>
+                    {isAssigned && (
+                      <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                        <Check className="w-3 h-3 text-primary-foreground" />
+                      </div>
+                    )}
+                  </div>
+                </button>
+              );
+            })
+          )}
+        </div>
+        
+        {currentAssignee && (
+          <button
+            onClick={() => unassignTask(getTaskId(selectedTaskForAssign))}
+            className="mt-4 w-full text-center text-sm text-red-500 hover:text-red-400 transition-colors"
+          >
+            Remove assignment
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
 
 export default function Projects() {
   const { tasks, loading: tasksLoading, createTask, updateTask, deleteTask } = useTasks();
@@ -71,41 +200,8 @@ export default function Projects() {
   const [assigneeFilter, setAssigneeFilter] = useState('all');
   const [workspace, setWorkspace] = useState(null);
 
-  const loadWorkspaceMembers = useCallback(async () => {
-    const token = localStorage.getItem('authToken');
-    if (!token || !user) return;
-
-    try {
-      if (!currentWorkspace) return;
-
-      const detailsResponse = await fetch(`${API_BASE}/workspace/${currentWorkspace.id || currentWorkspace._id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const details = detailsResponse.ok ? await detailsResponse.json() : currentWorkspace;
-      setWorkspace(details);
-      setTeamMembers((details.members || []).map((member) => {
-        const id = String(member._id || member.id);
-        const name = member.name || member.full_name || member.email;
-        return {
-          id,
-          name,
-          email: member.email,
-          avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=6C63FF&color=fff`,
-        };
-      }));
-    } catch (error) {
-      console.error('Failed to load workspace members:', error);
-    }
-  }, [user, currentWorkspace]);
-
-  // Load projects and workspace members after authentication is available.
-  useEffect(() => {
-    loadProjects();
-    loadWorkspaceMembers();
-  }, [user, loadWorkspaceMembers]);
-
-  // Load projects from backend with validation
-  const loadProjects = async () => {
+  // FIX: Wrapped loadProjects in useCallback to resolve dependency warning
+  const loadProjects = useCallback(async () => {
     setLoading(true);
     try {
       console.log(' Fetching projects from backend...');
@@ -135,7 +231,6 @@ export default function Projects() {
           (project) => !project.workspace_id || String(project.workspace_id) === String(workspaceId)
         );
         if (scopedProjects.length > 0) {
-          // Filter out projects without valid IDs
           const validProjects = scopedProjects.filter(p => p && p.id);
           if (validProjects.length > 0) {
             setProjects(validProjects);
@@ -158,11 +253,44 @@ export default function Projects() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentWorkspace]);
+
+  const loadWorkspaceMembers = useCallback(async () => {
+    const token = localStorage.getItem('authToken');
+    if (!token || !user) return;
+
+    try {
+      if (!currentWorkspace) return;
+
+      const detailsResponse = await fetch(`${API_BASE}/workspace/${currentWorkspace.id || currentWorkspace._id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const details = detailsResponse.ok ? await detailsResponse.json() : currentWorkspace;
+      setWorkspace(details);
+      setTeamMembers((details.members || []).map((member) => {
+        const id = String(member._id || member.id);
+        const name = member.name || member.full_name || member.email;
+        return {
+          id,
+          name,
+          email: member.email,
+          avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=6C63FF&color=fff`,
+        };
+      }));
+    } catch (error) {
+      console.error('Failed to load workspace members:', error);
+    }
+  }, [user, currentWorkspace]);
+
+  // Load projects and workspace members after authentication is available.
+  // FIX: Added loadProjects and loadWorkspaceMembers to dependencies
+  useEffect(() => {
+    loadProjects();
+    loadWorkspaceMembers();
+  }, [loadProjects, loadWorkspaceMembers]);
 
   // Handle project selection with validation
   const handleProjectSelect = (project) => {
-    // Validate project
     if (!project || typeof project !== 'object') {
       console.error('Invalid project:', project);
       return;
@@ -576,106 +704,6 @@ export default function Projects() {
   const isLoading = loading || tasksLoading;
   const stats = selectedProject ? getTaskStats(selectedProject.id) : null;
 
-  // Task Assignment Modal
-  const AssignModal = () => {
-    if (!selectedTaskForAssign) return null;
-    
-    const currentAssignee = selectedTaskForAssign.assignee_id;
-    const currentAssigneeName = selectedTaskForAssign.assignee_name;
-    
-    return (
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-        <div className="glass rounded-xl max-w-md w-full p-6 border border-border animate-fade-in">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
-              <Users className="w-5 h-5 text-primary" />
-              Assign Task
-            </h2>
-            <button
-              onClick={() => {
-                setShowAssignModal(false);
-                setSelectedTaskForAssign(null);
-              }}
-              className="p-1 hover:bg-secondary/60 rounded-lg transition-colors"
-            >
-              <X className="w-5 h-5 text-foreground" />
-            </button>
-          </div>
-          
-          <p className="text-sm text-muted-foreground mb-4">
-            Assign "{selectedTaskForAssign.title}" to a team member
-          </p>
-          
-          {currentAssignee && currentAssigneeName && (
-            <div className="mb-4 p-3 rounded-lg bg-primary/10 border border-primary/20 flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
-                <UserCheck className="w-4 h-4 text-primary" />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Currently assigned to</p>
-                <p className="text-sm font-medium text-foreground">{currentAssigneeName}</p>
-              </div>
-            </div>
-          )}
-          
-          <div className="space-y-2 max-h-64 overflow-y-auto">
-            {teamMembers.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <Users className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                <p className="text-sm">No team members available</p>
-                <p className="text-xs">Add team members to assign tasks</p>
-              </div>
-            ) : (
-              teamMembers.map(member => {
-                const isAssigned = currentAssignee === member.id;
-                const taskCount = getTasksForMember(member.id).length;
-                
-                return (
-                  <button
-                    key={`assign-${member.id}`}
-                    onClick={() => assignTaskToMember(getTaskId(selectedTaskForAssign), member.id)}
-                    className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-all ${
-                      isAssigned 
-                        ? 'border-primary/50 bg-primary/10' 
-                        : 'border-border hover:border-primary/30 hover:bg-secondary/30'
-                    }`}
-                  >
-                    <img 
-                      src={member.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(member.name)}&background=6C63FF&color=fff`} 
-                      alt={member.name} 
-                      className="w-10 h-10 rounded-full object-cover"
-                    />
-                    <div className="flex-1 text-left">
-                      <p className="text-sm font-medium text-foreground">{member.name}</p>
-                      <p className="text-xs text-muted-foreground">{member.email || 'No email'}</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-muted-foreground">{taskCount} tasks</span>
-                      {isAssigned && (
-                        <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center">
-                          <Check className="w-3 h-3 text-primary-foreground" />
-                        </div>
-                      )}
-                    </div>
-                  </button>
-                );
-              })
-            )}
-          </div>
-          
-          {currentAssignee && (
-            <button
-              onClick={() => unassignTask(getTaskId(selectedTaskForAssign))}
-              className="mt-4 w-full text-center text-sm text-red-500 hover:text-red-400 transition-colors"
-            >
-              Remove assignment
-            </button>
-          )}
-        </div>
-      </div>
-    );
-  };
-
   return (
     <div className="flex h-full overflow-hidden">
       {/* Projects List */}
@@ -724,7 +752,6 @@ export default function Projects() {
             </div>
           ) : (
             projects.map(proj => {
-              // Skip rendering if project doesn't have a valid ID
               if (!proj || !proj.id) {
                 console.warn('Skipping project with no id:', proj);
                 return null;
@@ -1071,7 +1098,19 @@ export default function Projects() {
         </div>
       )}
 
-      {showAssignModal && <AssignModal />}
+      {/* FIX: Render the external AssignModal and pass the required props */}
+      {showAssignModal && (
+        <AssignModal 
+          selectedTaskForAssign={selectedTaskForAssign}
+          setShowAssignModal={setShowAssignModal}
+          setSelectedTaskForAssign={setSelectedTaskForAssign}
+          teamMembers={teamMembers}
+          getTasksForMember={getTasksForMember}
+          assignTaskToMember={assignTaskToMember}
+          unassignTask={unassignTask}
+          getTaskId={getTaskId}
+        />
+      )}
     </div>
   );
 }

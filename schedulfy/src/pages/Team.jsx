@@ -1,8 +1,29 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react'; // FIX: Added useCallback
 import { 
   Users, 
   UserCheck, 
-  CheckSquare
+  CheckSquare,
+  Plus,
+  Loader2,
+  Briefcase,
+  MessageSquare,
+  LogOut,
+  UserPlus,
+  X,
+  Eye,
+  EyeOff,
+  Mail,
+  Send,
+  CheckCircle,
+  AlertCircle,
+  Video,
+  CalendarClock,
+  ExternalLink,
+  ListChecks,
+  Reply,
+  Copy,
+  Crown,
+  Trash2
 } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 import { useTasks } from '@/context/TaskContext';
@@ -53,13 +74,10 @@ export default function Team() {
   const [meetings, setMeetings] = useState([]);
   const [meetingForm, setMeetingForm] = useState({ title: '', starts_at: '', duration_minutes: 30 });
   const [schedulingMeeting, setSchedulingMeeting] = useState(false);
+  const [deletingMeeting, setDeletingMeeting] = useState(null);
 
-  // Fetch workspace on mount
-  useEffect(() => {
-    if (isAuthenticated && user && currentWorkspace) fetchWorkspaces();
-  }, [currentWorkspace, isAuthenticated, user]);
-
-  const fetchWorkspaces = async () => {
+  // FIX: Wrapped in useCallback to resolve the useEffect dependency warning
+  const fetchWorkspaces = useCallback(async () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('authToken');
@@ -106,7 +124,14 @@ export default function Team() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentWorkspace]); // FIX: Added currentWorkspace dependency
+
+  // Fetch workspace on mount
+  useEffect(() => {
+    if (isAuthenticated && user && currentWorkspace) {
+      fetchWorkspaces();
+    }
+  }, [currentWorkspace, isAuthenticated, user, fetchWorkspaces]); // FIX: Added fetchWorkspaces to dependencies
 
   const currentUserId = user?._id || user?.id;
   const isWorkspaceAdmin = workspace?.admin_id === currentUserId;
@@ -288,6 +313,26 @@ export default function Team() {
       setInviteSuccess(false);
     } finally {
       setSchedulingMeeting(false);
+    }
+  };
+
+  const deleteMeeting = async (meetingId) => {
+    if (!workspace?.id || !window.confirm('Delete this meeting?')) return;
+    setDeletingMeeting(meetingId);
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch(`${API_BASE}/workspace/${workspace.id}/meetings/${meetingId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || 'Failed to delete meeting');
+      setMeetings((current) => current.filter((meeting) => (meeting.id || meeting._id) !== meetingId));
+    } catch (error) {
+      setInviteMessage(error.message);
+      setInviteSuccess(false);
+    } finally {
+      setDeletingMeeting(null);
     }
   };
 
@@ -678,17 +723,30 @@ export default function Team() {
             </button>
           </div>
           <div className="mt-4 space-y-2 max-h-36 overflow-y-auto">
-            {meetings.map((meeting) => (
-              <div key={meeting.id || meeting._id} className="flex items-center justify-between gap-2 rounded-lg bg-secondary/40 px-3 py-2">
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold truncate">{meeting.title}</p>
-                  <p className="text-xs text-muted-foreground">{new Date(meeting.starts_at).toLocaleString()}</p>
+            {meetings.map((meeting) => {
+              const meetingId = meeting.id || meeting._id;
+              return (
+                <div key={meetingId} className="flex items-center justify-between gap-2 rounded-lg bg-secondary/40 px-3 py-2">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold truncate">{meeting.title}</p>
+                    <p className="text-xs text-muted-foreground">{new Date(meeting.starts_at).toLocaleString()}</p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <a href={meeting.zoom_url} target="_blank" rel="noreferrer" className="text-primary hover:text-primary/80" aria-label="Open Zoom scheduling">
+                      <ExternalLink className="w-4 h-4" />
+                    </a>
+                    <button
+                      onClick={() => deleteMeeting(meetingId)}
+                      disabled={deletingMeeting === meetingId}
+                      className="text-muted-foreground hover:text-red-400 disabled:opacity-50"
+                      aria-label="Delete meeting"
+                    >
+                      {deletingMeeting === meetingId ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                    </button>
+                  </div>
                 </div>
-                <a href={meeting.zoom_url} target="_blank" rel="noreferrer" className="shrink-0 text-primary hover:text-primary/80" aria-label="Open Zoom scheduling">
-                  <ExternalLink className="w-4 h-4" />
-                </a>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </section>
       </div>

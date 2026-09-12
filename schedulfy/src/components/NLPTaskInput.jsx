@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { format } from 'date-fns';
-
+import { Sparkles, Loader2, Check, X } from 'lucide-react';
 export default function NLPTaskInput({ onTaskCreated, projectId, workspaceId }) {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);

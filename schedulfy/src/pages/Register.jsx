@@ -1,9 +1,12 @@
 // pages/Register.jsx
-import React, { useState, useRef } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import React, { useState, useRef } from "react"
+import { useLocation, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/lib/AuthContext";
-import { Mail, UserPlus } from "lucide-react";
+
+import { Mail, UserPlus, Loader2, User, Lock, EyeOff, Eye } from "lucide-react";
 import schedulfySDK from "@/lib/sdk";
+// FIX: Added the missing AuthLayout component (Adjust path if it lives elsewhere!)
+import AuthLayout from "@/components/AuthLayout";
 
 // Google Icon Component
 const GoogleIcon = ({ className }) => (

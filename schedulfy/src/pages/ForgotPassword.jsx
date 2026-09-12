@@ -1,7 +1,12 @@
 // pages/ForgotPassword.jsx
 import { useState } from "react";
-import { Mail } from "lucide-react";
+// FIX: Added Link from react-router-dom
+import { Link } from "react-router-dom";
+// FIX: Added missing icons (Loader2, ArrowLeft) to the existing Mail import
+import { Mail, Loader2, ArrowLeft } from "lucide-react";
 import { schedulfy } from "@/api/schedulfyClient";
+// FIX: Added the missing AuthLayout component (Adjust path if it lives elsewhere!)
+import AuthLayout from "@/components/AuthLayout";
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");

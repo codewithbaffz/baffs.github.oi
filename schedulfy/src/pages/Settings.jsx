@@ -2,6 +2,22 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/lib/AuthContext.jsx';
 import { schedulfy } from '@/api/schedulfyClient';
 
+import {
+  Loader2,
+  Camera,
+  Shield,
+  User,
+  EyeOff,
+  Eye,
+  Zap,
+  Clock,
+  Bell,
+  Mail,
+  Copy,
+  Link as LinkIcon, // Aliased so it doesn't conflict with HTML <Link>
+  CheckCircle2,
+  Settings as SettingsIcon // Aliased so it doesn't conflict with this component's name
+} from 'lucide-react';
 
 
 //  Google Calendar Icon Component

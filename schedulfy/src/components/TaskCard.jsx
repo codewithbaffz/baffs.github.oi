@@ -1,7 +1,15 @@
 import { useState } from 'react';
 import { format, isPast, isToday } from 'date-fns';
-
-
+// FIX: Added all the missing icons used in this file
+import { 
+  Circle, 
+  CheckCircle2, 
+  Clock, 
+  AlertTriangle, 
+  Tag, 
+  Paperclip, 
+  Zap 
+} from 'lucide-react';
 
 const PRIORITY_CONFIG = {
   low: { label: 'Low', color: 'text-green-400', bg: 'bg-green-400/10 border-green-400/20' },
@@ -34,7 +42,7 @@ export default function TaskCard({ task, onUpdate, onDelete, onClick, compact = 
     setCompleting(true);
     const newStatus = isDone ? 'todo' : 'done';
     
-    //  Get the task ID correctly
+    // Get the task ID correctly
     const taskId = task.id || task._id || task.task_id;
     
     console.log(' Toggle Done - Task ID:', taskId);
@@ -47,7 +55,7 @@ export default function TaskCard({ task, onUpdate, onDelete, onClick, compact = 
     };
     
     try {
-      //  Call onUpdate with both ID and the updated task
+      // Call onUpdate with both ID and the updated task
       await onUpdate?.(taskId, updated);
     } catch (error) {
       console.error(' Failed to update task:', error);

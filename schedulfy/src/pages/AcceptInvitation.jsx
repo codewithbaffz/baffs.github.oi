@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+
+import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/lib/AuthContext';
 import { API_BASE } from '@/lib/sdk';
+
+import { Loader2, Users, CheckCircle } from 'lucide-react';
 
 export default function AcceptInvitation() {
   const [searchParams] = useSearchParams();

@@ -1,6 +1,10 @@
 // src/components/InsightChat.jsx
 import { useState } from 'react';
 import { useAuth } from '@/lib/AuthContext';
+// FIX: Added missing icons used in this file
+import { MessageCircle, Bot, X, AlertCircle, Send } from 'lucide-react';
+// FIX: Added missing ReactMarkdown library
+import ReactMarkdown from 'react-markdown';
 
 const InsightChat = ({ tasks, sessions, onClose }) => {
   const { user, isAuthenticated } = useAuth();

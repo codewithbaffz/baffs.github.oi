@@ -1,12 +1,32 @@
 import { useState, useEffect, useMemo } from 'react';
+// FIX 1: Link must come from react-router-dom, NOT lucide-react
+import { Link } from 'react-router-dom'; 
 import { 
   CheckCircle2, 
   Clock, 
   AlertTriangle, 
-  Timer
+  Timer,
+  Target,
+  ArrowRight,
+  Sparkles
+  // (Removed "Link" from this list)
 } from 'lucide-react';
 import { format, isToday, isPast, endOfDay } from 'date-fns';
 import { useTasks } from '@/context/TaskContext';
+
+// FIX 2 & 3: Import the missing components. 
+// NOTE: Adjust the paths below if your files live in a different folder!
+import TaskCard from '@/components/TaskCard'; 
+import NLPTaskInput from '@/components/NLPTaskInput';
+
+// FIX: Moved demoTasks OUTSIDE the component to resolve the useMemo dependency warning
+const demoTasks = [
+  { id: 'demo-1', title: 'Complete project proposal', status: 'todo', due_date: new Date().toISOString(), priority: 'high' },
+  { id: 'demo-2', title: 'Review team updates', status: 'in_progress', due_date: new Date().toISOString(), priority: 'medium' },
+  { id: 'demo-3', title: 'Update documentation', status: 'done', due_date: new Date(Date.now() - 86400000).toISOString(), priority: 'low' },
+  { id: 'demo-4', title: 'Prepare presentation', status: 'todo', due_date: new Date(Date.now() + 172800000).toISOString(), priority: 'high' },
+  { id: 'demo-5', title: 'Fix navigation bug', status: 'todo', due_date: new Date(Date.now() - 172800000).toISOString(), priority: 'urgent' },
+];
 
 export default function Dashboard() {
   const { tasks, loading, createTask, updateTask, deleteTask, fetchTasks } = useTasks();
@@ -47,15 +67,6 @@ export default function Dashboard() {
     }
   };
 
-  const demoTasks = [
-    { id: 'demo-1', title: 'Complete project proposal', status: 'todo', due_date: new Date().toISOString(), priority: 'high' },
-    { id: 'demo-2', title: 'Review team updates', status: 'in_progress', due_date: new Date().toISOString(), priority: 'medium' },
-    { id: 'demo-3', title: 'Update documentation', status: 'done', due_date: new Date(Date.now() - 86400000).toISOString(), priority: 'low' },
-    { id: 'demo-4', title: 'Prepare presentation', status: 'todo', due_date: new Date(Date.now() + 172800000).toISOString(), priority: 'high' },
-    { id: 'demo-5', title: 'Fix navigation bug', status: 'todo', due_date: new Date(Date.now() - 172800000).toISOString(), priority: 'urgent' },
-  ];
-
-  //  Use useMemo to ensure derived data updates when tasks change
   const displayTasks = useMemo(() => {
     return tasks && tasks.length > 0 ? tasks : demoTasks;
   }, [tasks]);
@@ -93,14 +104,9 @@ export default function Dashboard() {
         taskId = taskData._id || taskData.id || taskData.task_id;
       }
       
-      console.log(' Dashboard Update - ID:', taskId);
-      console.log(' Dashboard Update - Data:', taskData);
-      
       if (taskId) {
         const result = await updateTask(taskId, taskData);
         if (result.success) {
-          console.log(' Task updated successfully');
-          //  Force a refresh to ensure UI updates
           await fetchTasks();
         }
       } else {

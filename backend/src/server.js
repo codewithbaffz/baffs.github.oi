@@ -1,4 +1,5 @@
 import dotenv from 'dotenv';
+dotenv.config();
 import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
@@ -10,7 +11,7 @@ import workspaceRoutes from './Routes/workspace.js';
 import aiRoutes from './Routes/aiRoutes.js';
 import notificationRoutes from './Routes/notifications.js';
 
-dotenv.config();
+
 
 const app = express();
 
