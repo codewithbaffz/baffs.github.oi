@@ -1,13 +1,8 @@
 {
-  "version": 2,
-  "builds": [
-    {
-      "src": "schedulfy/package.json",
-      "use": "@vercel/static-build",
-      "config": { "distDir": "dist" }
-    }
-  ],
   "rewrites": [
-    { "source": "/((?!api/.*).*)", "destination": "/schedulfy/dist/index.html" }
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
   ]
 }
