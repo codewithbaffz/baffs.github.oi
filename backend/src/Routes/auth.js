@@ -58,6 +58,8 @@ router.post('/reset-password', async (req, res) => {
 });
 
 const getFrontendUrl = () => process.env.FRONTEND_URL || 'http://localhost:5173';
+// FIX: Added a helper for the backend URL. This MUST be your Render URL in production.
+const getBackendUrl = () => process.env.BACKEND_URL || 'http://localhost:5000';
 
 router.get('/google', (req, res) => {
   if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
@@ -70,7 +72,8 @@ router.get('/google', (req, res) => {
   const state = Buffer.from(JSON.stringify({ redirect })).toString('base64url');
   const params = new URLSearchParams({
     client_id: process.env.GOOGLE_CLIENT_ID,
-    redirect_uri: process.env.GOOGLE_REDIRECT_URI || `${getFrontendUrl()}/api/auth/google/callback`,
+    // FIX: Changed from getFrontendUrl() to getBackendUrl()
+    redirect_uri: process.env.GOOGLE_REDIRECT_URI || `${getBackendUrl()}/api/auth/google/callback`,
     response_type: 'code',
     scope: 'openid email profile',
     access_type: 'offline',
@@ -87,7 +90,8 @@ router.get('/google/callback', async (req, res) => {
     const redirect = req.query.state
       ? JSON.parse(Buffer.from(req.query.state, 'base64url').toString()).redirect || '/'
       : '/';
-    const redirectUri = process.env.GOOGLE_REDIRECT_URI || `${frontendUrl}/api/auth/google/callback`;
+    // FIX: Changed from frontendUrl to getBackendUrl() to match the initial request
+    const redirectUri = process.env.GOOGLE_REDIRECT_URI || `${getBackendUrl()}/api/auth/google/callback`;
 
     const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',

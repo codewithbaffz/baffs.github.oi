@@ -54,8 +54,10 @@ export default function Login() {
     }
   };
 
+  // FIX: Point Google login directly to your live backend on Render
   const handleGoogleLogin = () => {
-    window.location.href = `/api/auth/google?redirect=${encodeURIComponent(redirect)}`;
+    const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+    window.location.href = `${apiBase}/auth/google?redirect=${encodeURIComponent(redirect)}`;
   };
 
   return (

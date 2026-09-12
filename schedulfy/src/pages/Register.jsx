@@ -1,8 +1,9 @@
 // pages/Register.jsx
-import React, { useState, useRef } from "react"
+import React, { useState, useRef } from "react";
+// FIX: Added Link to the react-router-dom import
 import { useLocation, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/lib/AuthContext";
-
+// FIX: Added all the missing icons used in this file
 import { Mail, UserPlus, Loader2, User, Lock, EyeOff, Eye } from "lucide-react";
 import schedulfySDK from "@/lib/sdk";
 // FIX: Added the missing AuthLayout component (Adjust path if it lives elsewhere!)
@@ -188,12 +189,13 @@ export default function Register() {
     }
   };
 
+  // FIX: Point Google registration directly to your live backend on Render
   const handleGoogle = async () => {
     setError("");
     setLoading(true);
     try {
-      const apiBase = import.meta.env.VITE_API_URL || '/api';
-      window.location.href = `${apiBase}/auth/google`;
+      const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+      window.location.href = `${apiBase}/auth/google?redirect=${encodeURIComponent(redirect)}`;
     } catch (err) {
       console.error('Google login error:', err);
       setError(err.message || 'Unable to continue with Google');
