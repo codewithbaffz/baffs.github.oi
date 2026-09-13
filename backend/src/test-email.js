@@ -3,6 +3,9 @@ import dotenv from 'dotenv';
 dotenv.config();
 import { sendInvitationEmail } from './services/emailService.js';
 
+console.log('FROM_ADDRESS:', process.env.RESEND_FROM_EMAIL);
+console.log('API_KEY set?', process.env.RESEND_API_KEY ? 'Yes' : 'No');
+
 const testEmail = async () => {
   console.log(' Testing email configuration...');
   console.log(' SMTP_USER:', process.env.SMTP_USER);
@@ -11,7 +14,7 @@ const testEmail = async () => {
   
   try {
     const result = await sendInvitationEmail({
-      email: 'kojobaffs@gmail.com', // Your email to test
+      email: 'pbaffour411@gmail.com', // Your email to test
       workspaceName: 'Schedulfy Team',
       inviterName: 'Schedulfy User',
       inviteCode: 'TEST123',

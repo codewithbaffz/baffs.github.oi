@@ -437,7 +437,7 @@ export default function CalendarPage() {
 
       {/* Calendar View */}
       {view === 'month' ? (
-        <div className="flex-1 overflow-auto p-4">
+        <div className="flex-1 overflow-auto p-4 scrollbar-thin">
           {/* Day Headers */}
           <div className="grid grid-cols-7 mb-2">
             {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(d => (
@@ -572,7 +572,7 @@ export default function CalendarPage() {
         </div>
       ) : (
         /* Week View */
-        <div className="flex-1 overflow-auto">
+        <div className="flex-1 overflow-auto scrollbar-thin">
           <div className="grid grid-cols-8 border-b border-border sticky top-0 bg-card z-10">
             <div className="p-2 border-r border-border" />
             {weekDays.map(day => (

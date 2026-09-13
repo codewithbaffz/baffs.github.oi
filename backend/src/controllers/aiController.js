@@ -4,18 +4,64 @@ import Task from '../models/Task.js';
 import Workspace from '../models/Workspace.js';
 import groqService from '../services/groqService.js';
 
+// ---------------------------------------------------------------------------
+// Filter tasks locally based on the AI's query intent
+// ---------------------------------------------------------------------------
+function filterTasks(tasks, data = {}) {
+  let result = Array.isArray(tasks) ? [...tasks] : [];
+
+  if (data.status) {
+    result = result.filter((t) => t.status === data.status);
+  }
+  if (data.priority) {
+    result = result.filter((t) => t.priority === data.priority);
+  }
+  if (Array.isArray(data.tags) && data.tags.length > 0) {
+    result = result.filter((t) =>
+      (t.tags || []).some((tag) => data.tags.includes(tag))
+    );
+  }
+  if (data.query && data.query.trim()) {
+    const q = data.query.toLowerCase();
+    result = result.filter(
+      (t) =>
+        (t.title || '').toLowerCase().includes(q) ||
+        (t.description || '').toLowerCase().includes(q)
+    );
+  }
+  return result;
+}
+
+// ---------------------------------------------------------------------------
+// Build a nicer query message than "Here are your tasks."
+// ---------------------------------------------------------------------------
+function buildQueryMessage(filtered, originalMessage) {
+  // If AI already gave a specific message that isn't the generic one, keep it
+  const isGeneric =
+    !originalMessage ||
+    /^here (are|is) your/i.test(originalMessage.trim()) ||
+    /here are your current tasks/i.test(originalMessage);
+
+  if (!isGeneric) return originalMessage;
+
+  if (filtered.length === 0) {
+    return 'You have no tasks matching that.';
+  }
+  if (filtered.length === 1) {
+    return 'Here is your task:';
+  }
+  return `You have ${filtered.length} tasks:`;
+}
+
 // Process AI command
 export const processAICommand = async (req, res) => {
   try {
     const { command, context } = req.body;
-    
-    //  Try multiple ways to get userId
+
     const userId = req.userId || req.user?.id || req.user?.userId;
-    
+
     console.log(' AI Command received:', command);
     console.log(' User ID from request:', userId);
-    console.log(' Full req.user:', req.user);
-    console.log(' Full req.userId:', req.userId);
 
     if (!command) {
       return res.status(400).json({
@@ -25,17 +71,13 @@ export const processAICommand = async (req, res) => {
     }
 
     if (!userId) {
-      console.log(' No user ID found in request');
       return res.status(401).json({
         type: 'error',
         message: 'Authentication required. Please login again.',
       });
     }
 
-    // Get user from database
     const user = await User.findById(userId);
-    console.log(' User found:', user ? 'Yes' : 'No');
-    
     if (!user) {
       return res.status(404).json({
         type: 'error',
@@ -43,16 +85,26 @@ export const processAICommand = async (req, res) => {
       });
     }
 
-    const workspaces = await Workspace.find({ member_ids: userId }).select('_id admin_id visibility');
+    const workspaces = await Workspace.find({ member_ids: userId }).select(
+      '_id admin_id visibility'
+    );
     const visibleWorkspaceIds = workspaces
-      .filter((workspace) => workspace.admin_id === userId || workspace.visibility?.tasks !== false)
+      .filter(
+        (workspace) =>
+          workspace.admin_id === userId ||
+          workspace.visibility?.tasks !== false
+      )
       .map((workspace) => workspace._id);
+
     const tasks = await Task.find({
       $or: [
         { user_id: userId },
         { workspace_id: { $in: visibleWorkspaceIds } },
       ],
-    }).sort({ created_at: -1 }).lean();
+    })
+      .sort({ created_at: -1 })
+      .lean();
+
     console.log(' Tasks found:', tasks.length);
 
     const response = await groqService.processCommand(command, {
@@ -61,17 +113,40 @@ export const processAICommand = async (req, res) => {
       stats: context?.stats,
     });
 
+    const intent = response.intent || response.type || 'query';
+
+    // -----------------------------------------------------------------------
+    // If it's a query, actually attach the filtered tasks so the frontend
+    // can render them (frontend reads action.data.tasks).
+    // -----------------------------------------------------------------------
+    let enriched = { ...response };
+
+    if (intent === 'query') {
+      const filtered = filterTasks(tasks, response.data || {});
+      enriched = {
+        ...response,
+        data: {
+          ...(response.data || {}),
+          tasks: filtered,
+        },
+        message: buildQueryMessage(filtered, response.message),
+      };
+    }
+
     res.json({
-      ...response,
-      type: response.type || response.intent || 'query',
-      requiresConfirmation: response.requiresConfirmation || response.intent === 'delete',
+      ...enriched,
+      type: enriched.type || enriched.intent || 'query',
+      requiresConfirmation:
+        enriched.requiresConfirmation || enriched.intent === 'delete',
     });
   } catch (error) {
     console.error(' AI processing error:', error);
     console.error(' Stack:', error.stack);
     res.status(502).json({
       type: 'error',
-      message: error.message || 'The AI service could not process that request. Please try again.',
+      message:
+        error.message ||
+        'The AI service could not process that request. Please try again.',
       error: error.message,
     });
   }
@@ -83,7 +158,7 @@ export const executeAIAction = async (req, res) => {
     const { action } = req.body;
     const userId = req.userId || req.user?.id || req.user?.userId;
 
-    console.log(' Executing action:', action.type);
+    console.log(' Executing action:', action?.type);
     console.log(' User ID:', userId);
 
     if (!userId) {
@@ -93,23 +168,34 @@ export const executeAIAction = async (req, res) => {
       });
     }
 
+    if (!action || !action.type) {
+      return res.status(400).json({
+        success: false,
+        message: 'Action payload is missing or malformed.',
+      });
+    }
+
     let result;
 
     switch (action.type) {
       case 'create':
-        result = await createTask(action.data, userId);
+        result = await createTask(action.data || {}, userId);
         break;
       case 'update':
-        result = await updateTask(action.data, userId);
+        result = await updateTask(action.data || {}, userId);
         break;
       case 'delete':
-        result = await deleteTask(action.data, userId);
+        result = await deleteTask(action.data || {}, userId);
         break;
       case 'query':
-        result = await queryTasks(action.data, userId);
+        result = await queryTasks(action.data || {}, userId);
         break;
       default:
-        throw new Error('Unknown action type');
+        return res.status(200).json({
+          success: false,
+          needsMoreInfo: true,
+          message: `I'm not sure how to handle a "${action.type}" action yet. Try rephrasing?`,
+        });
     }
 
     res.json(result);
@@ -123,97 +209,57 @@ export const executeAIAction = async (req, res) => {
   }
 };
 
-// Process command - Simple version for testing
-async function processCommand(command, context) {
-  const { tasks, user } = context;
-  const commandLower = command.toLowerCase();
+// ---- Helpers ---------------------------------------------------------------
 
-  console.log(' Processing command:', commandLower);
+const VALID_PRIORITIES = ['urgent', 'high', 'medium', 'low'];
+const VALID_STATUSES = ['todo', 'in_progress', 'done', 'overdue', 'snoozed'];
 
-  // Check for task creation
-  if (commandLower.includes('create') || commandLower.includes('new task') || commandLower.includes('add task')) {
-    let title = command;
-    const phrases = ['create a new task', 'create task', 'new task', 'add task', 'create'];
-    for (const phrase of phrases) {
-      title = title.replace(new RegExp(phrase, 'i'), '').trim();
-    }
-    title = title.replace(/for (today|tomorrow|next week|monday|tuesday|wednesday|thursday|friday|saturday|sunday)/i, '').trim();
-    
-    if (!title) {
-      return {
-        type: 'error',
-        message: 'Please specify what task you want to create.',
-        requiresConfirmation: false,
-      };
-    }
-
-    return {
-      type: 'create',
-      data: {
-        title: title || 'Untitled Task',
-        priority: 'medium',
-        status: 'todo',
-      },
-      message: `I'll create a new task: "${title}"`,
-      requiresConfirmation: false,
-    };
-  }
-
-  // Check for task listing
-  if (commandLower.includes('show') || commandLower.includes('list') || commandLower.includes('view') || commandLower.includes('tasks')) {
-    const taskList = tasks.map((t, i) => `${i + 1}. ${t.title} (${t.status || 'todo'})`).join('\n');
-    return {
-      type: 'query',
-      data: { tasks },
-      message: tasks.length > 0 
-        ? `You have ${tasks.length} tasks:\n${taskList}`
-        : 'You have no tasks yet.',
-      requiresConfirmation: false,
-    };
-  }
-
-  // Check for task deletion
-  if (commandLower.includes('delete') || commandLower.includes('remove')) {
-    if (tasks.length === 0) {
-      return {
-        type: 'error',
-        message: 'You have no tasks to delete.',
-        requiresConfirmation: false,
-      };
-    }
-    return {
-      type: 'delete',
-      data: { 
-        ids: tasks.map(t => t._id).slice(0, 1),
-        title: tasks[0]?.title || 'task'
-      },
-      message: `Are you sure you want to delete "${tasks[0]?.title || 'this task'}"?`,
-      requiresConfirmation: true,
-    };
-  }
-
-  // Default response
-  return {
-    type: 'query',
-    data: { tasks },
-    message: ` Hello! I can help you manage your tasks. You have ${tasks.length} tasks. Try saying "create a new task" or "show my tasks".`,
-    requiresConfirmation: false,
-  };
+function normalizeTitle(raw) {
+  if (typeof raw !== 'string') return '';
+  return raw.trim().replace(/\s+/g, ' ');
+}
+function normalizePriority(raw) {
+  if (typeof raw !== 'string') return 'medium';
+  const p = raw.toLowerCase().trim();
+  return VALID_PRIORITIES.includes(p) ? p : 'medium';
+}
+function normalizeStatus(raw) {
+  if (typeof raw !== 'string') return 'todo';
+  const s = raw.toLowerCase().trim().replace(/\s+/g, '_');
+  return VALID_STATUSES.includes(s) ? s : 'todo';
+}
+function normalizeDueDate(raw) {
+  if (!raw) return null;
+  const d = new Date(raw);
+  return isNaN(d.getTime()) ? null : d;
 }
 
-// Helper functions
 async function createTask(data, userId) {
   try {
+    const title = normalizeTitle(data.title);
+
+    if (!title) {
+      return {
+        success: false,
+        needsMoreInfo: true,
+        message:
+          'Sure — what would you like the task to be called? Try something like "Create a task called Buy groceries tomorrow at 5pm".',
+      };
+    }
+
     const task = new Task({
-      title: data.title,
-      description: data.description || '',
-      priority: data.priority || 'medium',
-      status: data.status || 'todo',
-      due_date: data.due_date || null,
-      tags: data.tags || [],
+      title,
+      description:
+        typeof data.description === 'string' ? data.description.trim() : '',
+      priority: normalizePriority(data.priority),
+      status: normalizeStatus(data.status),
+      due_date: normalizeDueDate(data.due_date),
+      tags: Array.isArray(data.tags)
+        ? data.tags.map((t) => String(t).trim()).filter(Boolean)
+        : [],
       is_ai_generated: true,
       source: 'ai_assistant',
-      userId: userId,
+      user_id: userId, // <-- matches your schema's field name
     });
 
     const created = await task.save();
@@ -236,15 +282,36 @@ async function createTask(data, userId) {
 async function updateTask(data, userId) {
   try {
     const { ids, changes } = data;
-    const taskIds = ids || [data.id];
+    const taskIds = ids || (data.id ? [data.id] : []);
 
-    if (!taskIds || taskIds.length === 0) {
-      throw new Error('No task IDs provided');
+    if (!taskIds.length) {
+      return {
+        success: false,
+        needsMoreInfo: true,
+        message: 'Which task would you like to update?',
+      };
+    }
+
+    const safeChanges = { ...changes };
+    if ('priority' in safeChanges)
+      safeChanges.priority = normalizePriority(safeChanges.priority);
+    if ('status' in safeChanges)
+      safeChanges.status = normalizeStatus(safeChanges.status);
+    if ('due_date' in safeChanges)
+      safeChanges.due_date = normalizeDueDate(safeChanges.due_date);
+    if ('title' in safeChanges) {
+      const t = normalizeTitle(safeChanges.title);
+      if (!t) delete safeChanges.title;
+      else safeChanges.title = t;
     }
 
     const results = [];
     for (const id of taskIds) {
-      const updated = await Task.findByIdAndUpdate(id, changes, { new: true });
+      const updated = await Task.findOneAndUpdate(
+        { _id: id, $or: [{ user_id: userId }, { userId }] },
+        safeChanges,
+        { new: true }
+      );
       if (updated) results.push(updated);
     }
 
@@ -266,15 +333,22 @@ async function updateTask(data, userId) {
 async function deleteTask(data, userId) {
   try {
     const { ids, reason } = data;
-    const taskIds = ids || [data.id];
+    const taskIds = ids || (data.id ? [data.id] : []);
 
-    if (!taskIds || taskIds.length === 0) {
-      throw new Error('No task IDs provided');
+    if (!taskIds.length) {
+      return {
+        success: false,
+        needsMoreInfo: true,
+        message: 'Which task would you like to delete?',
+      };
     }
 
     const results = [];
     for (const id of taskIds) {
-      const deleted = await Task.findByIdAndDelete(id);
+      const deleted = await Task.findOneAndDelete({
+        _id: id,
+        $or: [{ user_id: userId }, { userId }],
+      });
       if (deleted) results.push(id);
     }
 
@@ -295,11 +369,11 @@ async function deleteTask(data, userId) {
 
 async function queryTasks(data, userId) {
   try {
-    let query = { userId };
+    const query = { $or: [{ user_id: userId }, { userId }] };
     const { status, priority, tags } = data;
 
-    if (status) query.status = status;
-    if (priority) query.priority = priority;
+    if (status) query.status = normalizeStatus(status);
+    if (priority) query.priority = normalizePriority(priority);
     if (tags && tags.length > 0) {
       query.tags = { $in: tags };
     }
@@ -308,9 +382,10 @@ async function queryTasks(data, userId) {
 
     if (data.query) {
       const q = data.query.toLowerCase();
-      filtered = filtered.filter(t =>
-        t.title.toLowerCase().includes(q) ||
-        (t.description && t.description.toLowerCase().includes(q))
+      filtered = filtered.filter(
+        (t) =>
+          t.title.toLowerCase().includes(q) ||
+          (t.description && t.description.toLowerCase().includes(q))
       );
     }
 

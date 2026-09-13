@@ -24,6 +24,12 @@ import InsightChat from '@/components/InsightChat';
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const COLORS = ['hsl(248 100% 70%)', 'hsl(191 100% 50%)', 'hsl(160 60% 45%)', 'hsl(43 74% 66%)', 'hsl(0 84% 60%)'];
 
+// PERF: These panels live in the normal page scroll. backdrop-filter ("glass") on elements
+// that scroll with the page forces Safari iOS to recompute the blur every frame, which
+// causes scroll jank. Solid tinted backgrounds keep a similar look without that cost.
+// (Same fix as Dashboard.)
+const PANEL = 'bg-card/90 border border-border';
+
 // Custom Tooltip Component
 const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
@@ -61,11 +67,11 @@ export default function Insights() {
     try {
       setLoading(true);
       setError(null);
-      
+
       // Get current user
       const user = await schedulfySDK.auth.me();
       console.log('User loaded:', user);
-      
+
       // Fetch real tasks from backend
       let tasksData = [];
       try {
@@ -75,7 +81,7 @@ export default function Insights() {
         console.error('Failed to fetch tasks:', taskError);
         setError('Failed to load tasks. Please refresh.');
       }
-      
+
       // Fetch real events/sessions from backend
       let sessionsData = [];
       try {
@@ -85,7 +91,7 @@ export default function Insights() {
         console.error('Failed to fetch sessions:', sessionError);
         // Don't set error for sessions, just show empty
       }
-      
+
       setTasks(tasksData || []);
       setFocusSessions(sessionsData || []);
     } catch (error) {
@@ -137,7 +143,7 @@ export default function Insights() {
   if (!isAuthenticated) {
     return (
       <div className="flex items-center justify-center h-full">
-        <div className="text-center p-8 glass rounded-xl border border-border max-w-md">
+        <div className={`text-center p-8 ${PANEL} rounded-xl max-w-md`}>
           <h2 className="text-xl font-bold mb-2">Authentication Required</h2>
           <p className="text-muted-foreground mb-4">Please log in to view your insights.</p>
           <button
@@ -154,7 +160,7 @@ export default function Insights() {
   if (error) {
     return (
       <div className="flex items-center justify-center h-full">
-        <div className="text-center p-8 glass rounded-xl border border-red-500/20 max-w-md">
+        <div className="text-center p-8 bg-card/90 rounded-xl border border-red-500/20 max-w-md">
           <h2 className="text-xl font-bold mb-2 text-red-500">Error</h2>
           <p className="text-muted-foreground">{error}</p>
           <button
@@ -188,7 +194,7 @@ export default function Insights() {
           { label: 'Focus Hours', value: `${totalFocusHours}h`, icon: Clock, color: 'text-green-400', desc: `${sessions.length} sessions` },
           { label: 'Streak Score', value: `${Math.min(completionRate, 99)}`, icon: Zap, color: 'text-yellow-400', desc: 'Productivity index' },
         ].map(({ label, value, icon: Icon, color, desc }) => (
-          <div key={label} className="glass rounded-xl p-4 border border-border">
+          <div key={label} className={`${PANEL} rounded-xl p-4`}>
             <div className="flex items-center gap-2 mb-2">
               <Icon className={`w-4 h-4 ${color}`} />
               <span className="text-xs text-muted-foreground uppercase tracking-wider">{label}</span>
@@ -202,7 +208,7 @@ export default function Insights() {
       {/* Charts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Completions this week */}
-        <div className="glass rounded-xl p-5 border border-border">
+        <div className={`${PANEL} rounded-xl p-5`}>
           <h3 className="font-heading text-sm font-bold tracking-wide text-muted-foreground mb-4">DAILY COMPLETIONS (LAST 7 DAYS)</h3>
           <ResponsiveContainer width="100%" height={180}>
             <BarChart data={last7Days}>
@@ -215,7 +221,7 @@ export default function Insights() {
         </div>
 
         {/* Tasks by day of week */}
-        <div className="glass rounded-xl p-5 border border-border">
+        <div className={`${PANEL} rounded-xl p-5`}>
           <h3 className="font-heading text-sm font-bold tracking-wide text-muted-foreground mb-4">TASKS BY DAY OF WEEK</h3>
           <ResponsiveContainer width="100%" height={180}>
             <BarChart data={byDayOfWeek}>
@@ -229,7 +235,7 @@ export default function Insights() {
         </div>
 
         {/* Status Distribution */}
-        <div className="glass rounded-xl p-5 border border-border">
+        <div className={`${PANEL} rounded-xl p-5`}>
           <h3 className="font-heading text-sm font-bold tracking-wide text-muted-foreground mb-4">TASK STATUS DISTRIBUTION</h3>
           <div className="flex items-center justify-between">
             <ResponsiveContainer width="55%" height={180}>
@@ -252,7 +258,7 @@ export default function Insights() {
         </div>
 
         {/* Priority Distribution */}
-        <div className="glass rounded-xl p-5 border border-border">
+        <div className={`${PANEL} rounded-xl p-5`}>
           <h3 className="font-heading text-sm font-bold tracking-wide text-muted-foreground mb-4">PRIORITY BREAKDOWN</h3>
           <div className="space-y-3">
             {priorityDist.map((p, i) => (

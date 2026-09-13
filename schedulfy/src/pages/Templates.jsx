@@ -3,17 +3,22 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/lib/AuthContext';
 import { schedulfySDK } from '@/lib/sdk';
 import { addDays } from 'date-fns';
-import { 
-  Plus, 
-  Loader2, 
-  FileText, 
-  Sparkles, 
-  ChevronUp, 
-  ChevronDown, 
-  Clock, 
-  Play 
+import {
+  Plus,
+  Loader2,
+  FileText,
+  Sparkles,
+  ChevronUp,
+  ChevronDown,
+  Clock,
+  Play
 } from 'lucide-react';
 
+// PERF: These panels live in the normal page scroll. backdrop-filter ("glass") on elements
+// that scroll with the page forces Safari iOS to recompute the blur every frame, which
+// causes scroll jank. Solid tinted backgrounds keep a similar look without that cost.
+// (Same fix as Dashboard / Focus / Insights / Tasks.)
+const PANEL = 'bg-card/90 border border-border';
 
 const DEFAULT_TEMPLATES = [
   {
@@ -82,7 +87,7 @@ export default function Templates() {
     try {
       setLoading(true);
       setError(null);
-      
+
       let data = [];
       try {
         const stored = localStorage.getItem('templates');
@@ -104,7 +109,7 @@ export default function Templates() {
         console.error('Error loading templates:', _err);
         data = [];
       }
-      
+
       setTemplates(data);
     } catch (_err) {
       console.error('Error in loadTemplates:', _err);
@@ -265,7 +270,7 @@ export default function Templates() {
   if (!isAuthenticated) {
     return (
       <div className="flex items-center justify-center h-full">
-        <div className="text-center p-8 glass rounded-xl border border-border max-w-md">
+        <div className={`text-center p-8 ${PANEL} rounded-xl max-w-md`}>
           <h2 className="text-xl font-bold mb-2">Authentication Required</h2>
           <p className="text-muted-foreground mb-4">Please log in to view and manage templates.</p>
           <button
@@ -307,7 +312,7 @@ export default function Templates() {
 
       {/* Create Form */}
       {showCreate && (
-        <div className="glass rounded-xl p-5 border border-border animate-fade-in space-y-4">
+        <div className={`${PANEL} rounded-xl p-5 animate-fade-in space-y-4`}>
           <h3 className="font-heading text-base font-bold tracking-wide">CREATE BLUEPRINT</h3>
           <div className="grid grid-cols-2 gap-3">
             <input
@@ -406,7 +411,7 @@ export default function Templates() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {templates.map(tmpl => (
-            <div key={tmpl.id || tmpl._id || Math.random()} className="glass rounded-xl border border-border hover:border-primary/30 transition-all overflow-hidden">
+            <div key={tmpl.id || tmpl._id || Math.random()} className={`${PANEL} rounded-xl hover:border-primary/30 transition-all overflow-hidden`}>
               <div className="p-4">
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex items-center gap-2">

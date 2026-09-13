@@ -19,6 +19,11 @@ import {
   Settings as SettingsIcon // Aliased so it doesn't conflict with this component's name
 } from 'lucide-react';
 
+// PERF: These panels live in the normal page scroll. backdrop-filter ("glass") on elements
+// that scroll with the page forces Safari iOS to recompute the blur every frame, which
+// causes scroll jank. Solid tinted backgrounds keep a similar look without that cost.
+// (Same fix as Dashboard / Focus / Insights / Tasks / Templates.)
+const PANEL = 'bg-card/90 border border-border';
 
 //  Google Calendar Icon Component
 const GoogleCalendarIcon = ({ className = "w-5 h-5" }) => (
@@ -268,7 +273,7 @@ export default function Settings() {
       {settingsError && <div className="rounded-lg border border-red-400/30 bg-red-400/10 p-3 text-sm text-red-400">{settingsError}</div>}
 
       {/* PROFILE CARD */}
-      <section className="glass rounded-2xl border border-border overflow-hidden">
+      <section className={`${PANEL} rounded-2xl overflow-hidden`}>
         <div className="h-20 bg-gradient-to-r from-primary/30 via-primary/10 to-cyan/20" />
         <div className="px-6 pb-6">
           <div className="flex items-end justify-between -mt-8 mb-5">
@@ -332,7 +337,7 @@ export default function Settings() {
       </section>
 
       {/* SECURITY */}
-      <section className="glass rounded-2xl border border-border p-6 space-y-4">
+      <section className={`${PANEL} rounded-2xl p-6 space-y-4`}>
         <div className="flex items-center gap-2 mb-1">
           <div className="w-7 h-7 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
             <Shield className="w-3.5 h-3.5 text-primary" />
@@ -375,7 +380,7 @@ export default function Settings() {
       </section>
 
       {/* PRODUCTIVITY PREFERENCES */}
-      <section className="glass rounded-2xl border border-border p-6 space-y-4">
+      <section className={`${PANEL} rounded-2xl p-6 space-y-4`}>
         <div className="flex items-center gap-2 mb-1">
           <div className="w-7 h-7 rounded-lg bg-cyan/10 border border-cyan/20 flex items-center justify-center">
             <Zap className="w-3.5 h-3.5 text-cyan" />
@@ -424,7 +429,7 @@ export default function Settings() {
 
       {/* ADMIN PANEL */}
       {user?.role === 'admin' && (
-        <section className="glass rounded-2xl border border-border p-6 space-y-4">
+        <section className={`${PANEL} rounded-2xl p-6 space-y-4`}>
           <div className="flex items-center gap-2 mb-1">
             <div className="w-7 h-7 rounded-lg bg-yellow-400/10 border border-yellow-400/20 flex items-center justify-center">
               <Shield className="w-3.5 h-3.5 text-yellow-400" />
@@ -451,7 +456,7 @@ export default function Settings() {
                     const isSelf = member.id === user.id;
                     const nextRole = member.role === 'admin' ? 'member' : 'admin';
                     return (
-                      <div key={member.id} className="glass rounded-2xl border border-border p-4">
+                      <div key={member.id} className={`${PANEL} rounded-2xl p-4`}>
                         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                           <div>
                             <p className="font-semibold text-sm text-foreground">{member.full_name || member.email}</p>
@@ -486,7 +491,7 @@ export default function Settings() {
       )}
 
       {/* NOTIFICATIONS */}
-      <section className="glass rounded-2xl border border-border p-6 space-y-4">
+      <section className={`${PANEL} rounded-2xl p-6 space-y-4`}>
         <div className="flex items-center gap-2 mb-1">
           <div className="w-7 h-7 rounded-lg bg-yellow-400/10 border border-yellow-400/20 flex items-center justify-center">
             <Bell className="w-3.5 h-3.5 text-yellow-400" />
@@ -515,7 +520,7 @@ export default function Settings() {
       </section>
 
       {/* EMAIL-TO-TASK */}
-      <section className="glass rounded-2xl border border-border p-6 space-y-3">
+      <section className={`${PANEL} rounded-2xl p-6 space-y-3`}>
         <div className="flex items-center gap-2 mb-1">
           <div className="w-7 h-7 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
             <Mail className="w-3.5 h-3.5 text-primary" />
@@ -534,7 +539,7 @@ export default function Settings() {
       </section>
 
       {/* INTEGRATIONS -  FIXED WITH CUSTOM ICONS */}
-      <section className="glass rounded-2xl border border-border p-6 space-y-4">
+      <section className={`${PANEL} rounded-2xl p-6 space-y-4`}>
         <div className="flex items-center gap-2 mb-1">
           <div className="w-7 h-7 rounded-lg bg-green-400/10 border border-green-400/20 flex items-center justify-center">
             <GoogleCalendarIcon className="w-3.5 h-3.5 text-green-400" />
@@ -543,17 +548,17 @@ export default function Settings() {
         </div>
         <div className="space-y-2">
           {[
-            { 
-              key: 'google_calendar_connected', 
-              label: 'Google Calendar', 
-              desc: 'Two-way sync for conflict detection and time-blocking', 
+            {
+              key: 'google_calendar_connected',
+              label: 'Google Calendar',
+              desc: 'Two-way sync for conflict detection and time-blocking',
               icon: <GoogleCalendarIcon className="w-5 h-5 text-green-400" />,
               connectUrl: 'https://calendar.google.com/'
             },
-            { 
-              key: 'zoom_connected', 
-              label: 'Zoom', 
-              desc: 'Auto-create tasks from upcoming meetings', 
+            {
+              key: 'zoom_connected',
+              label: 'Zoom',
+              desc: 'Auto-create tasks from upcoming meetings',
               icon: <ZoomIcon className="w-5 h-5 text-blue-400" />,
               connectUrl: 'https://zoom.us/'
             },

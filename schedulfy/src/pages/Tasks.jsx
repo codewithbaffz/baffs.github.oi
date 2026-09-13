@@ -7,6 +7,12 @@ import { Sparkles, Plus, Loader2, Search } from 'lucide-react';
 import TaskCard from '@/components/TaskCard';
 import NLPTaskInput from '@/components/NLPTaskInput';
 
+// PERF: These panels live in the normal page scroll. backdrop-filter ("glass") on elements
+// that scroll with the page forces Safari iOS to recompute the blur every frame, which
+// causes scroll jank. Solid tinted backgrounds keep a similar look without that cost.
+// (Same fix as Dashboard.)
+const PANEL = 'bg-card/90 border border-border';
+
 const FILTERS = ['all', 'todo', 'in_progress', 'done', 'overdue', 'snoozed'];
 const PRIORITIES = ['all', 'urgent', 'high', 'medium', 'low'];
 
@@ -107,14 +113,14 @@ export default function Tasks() {
 
       {/* NLP Input */}
       {showNLP && (
-        <div className="glass rounded-xl p-4 animate-fade-in">
+        <div className={`${PANEL} rounded-xl p-4 animate-fade-in`}>
           <NLPTaskInput onTaskCreated={(task) => { setShowNLP(false); }} />
         </div>
       )}
 
       {/* Manual Form */}
       {showManual && (
-        <div className="glass rounded-xl p-5 border border-border animate-fade-in space-y-4">
+        <div className={`${PANEL} rounded-xl p-5 animate-fade-in space-y-4`}>
           <h3 className="font-heading text-base font-bold tracking-wide text-foreground">NEW TASK</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="md:col-span-2">

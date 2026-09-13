@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { 
-  Timer, 
-  Coffee, 
+import {
+  Timer,
+  Coffee,
   Zap,
   Settings,
   RotateCcw,
@@ -18,6 +18,12 @@ const DEFAULT_WORK_MINS = 25;
 const DEFAULT_BREAK_MINS = 5;
 const DEFAULT_LONG_BREAK_MINS = 15;
 
+// PERF: These panels live in the normal page scroll. backdrop-filter ("glass") on elements
+// that scroll with the page forces Safari iOS to recompute the blur every frame, which
+// causes scroll jank. Solid tinted backgrounds keep a similar look without that cost.
+// (Same fix as Dashboard.)
+const PANEL = 'bg-card/90 border border-border';
+
 // Demo data for sessions
 const DEMO_SESSIONS = [
   { id: '1', task_title: 'Complete project proposal', completed: true, cycles_completed: 4, created_date: new Date(Date.now() - 86400000).toISOString() },
@@ -29,15 +35,15 @@ export default function Focus() {
   // Get tasks from TaskContext
   const { tasks, loading: tasksLoading, fetchTasks } = useTasks();
   const [selectedTask, setSelectedTask] = useState(null);
-  
+
   const [sessions, setSessions] = useState(DEMO_SESSIONS);
-  
+
   // Timer configuration
   const [workMins, setWorkMins] = useState(DEFAULT_WORK_MINS);
   const [breakMins, setBreakMins] = useState(DEFAULT_BREAK_MINS);
   const [longBreakMins, setLongBreakMins] = useState(DEFAULT_LONG_BREAK_MINS);
   const [showSettings, setShowSettings] = useState(false);
-  
+
   const [mode, setMode] = useState('work');
   const [timeLeft, setTimeLeft] = useState(DEFAULT_WORK_MINS * 60);
   const [running, setRunning] = useState(false);
@@ -83,15 +89,15 @@ export default function Focus() {
     if (mode === 'work') {
       const newCycles = cyclesDone + 1;
       setCyclesDone(newCycles);
-      
+
       if (sessionId) {
-        setSessions(prev => prev.map(s => 
-          s.id === sessionId 
+        setSessions(prev => prev.map(s =>
+          s.id === sessionId
             ? { ...s, completed: true, cycles_completed: newCycles, ended_at: new Date().toISOString() }
             : s
         ));
       }
-      
+
       if (newCycles % 4 === 0) {
         setMode('longbreak');
         setTimeLeft(longBreakMins * 60);
@@ -103,7 +109,7 @@ export default function Focus() {
       setMode('work');
       setTimeLeft(workMins * 60);
     }
-    
+
     // Play notification sound
     try {
       new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAA').play().catch(() => {});
@@ -117,7 +123,7 @@ export default function Focus() {
       // Get the task ID (handle both _id and id)
       const taskId = selectedTask?._id || selectedTask?.id || null;
       const taskTitle = selectedTask?.title || null;
-      
+
       const newSession = {
         id: Date.now().toString(),
         task_id: taskId,
@@ -148,11 +154,11 @@ export default function Focus() {
   // Update timer when settings change
   const updateTimerSettings = (newWorkMins, newBreakMins, newLongBreakMins) => {
     if (running) return; // Don't allow changes while running
-    
+
     setWorkMins(newWorkMins);
     setBreakMins(newBreakMins);
     setLongBreakMins(newLongBreakMins);
-    
+
     // Update current timer based on mode
     if (mode === 'work') {
       setTimeLeft(newWorkMins * 60);
@@ -202,7 +208,7 @@ export default function Focus() {
 
       {/* Settings Panel */}
       {showSettings && (
-        <div className="glass rounded-xl p-4 border border-border space-y-3">
+        <div className={`${PANEL} rounded-xl p-4 space-y-3`}>
           <h3 className="font-heading text-sm font-bold tracking-wider text-muted-foreground">TIMER SETTINGS</h3>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
@@ -263,14 +269,14 @@ export default function Focus() {
             {Object.entries(MODE_CONFIG).map(([key, cfg]) => (
               <button
                 key={key}
-                onClick={() => { 
-                  if (!running) { 
-                    setMode(key); 
+                onClick={() => {
+                  if (!running) {
+                    setMode(key);
                     setTimeLeft(
-                      key === 'work' ? workMins * 60 : 
-                      key === 'break' ? breakMins * 60 : 
+                      key === 'work' ? workMins * 60 :
+                      key === 'break' ? breakMins * 60 :
                       longBreakMins * 60
-                    ); 
+                    );
                   }
                 }}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${mode === key ? `${cfg.bg} ${cfg.color}` : 'text-muted-foreground hover:text-foreground'}`}
@@ -356,7 +362,7 @@ export default function Focus() {
           </div>
 
           {running && (
-            <div className="glass-indigo rounded-xl px-5 py-3 text-center animate-pulse-glow">
+            <div className="bg-primary/10 border border-primary/20 rounded-xl px-5 py-3 text-center animate-pulse-glow">
               <p className="text-sm text-primary font-semibold"> Focus Mode Active — Stay focused!</p>
               {selectedTask && <p className="text-xs text-muted-foreground mt-0.5">Working on: {selectedTask.title}</p>}
             </div>
@@ -366,7 +372,7 @@ export default function Focus() {
         {/* Sidebar */}
         <div className="lg:col-span-2 space-y-4">
           {/* Pomodoro guide */}
-          <div className="glass rounded-xl p-4 border border-border">
+          <div className={`${PANEL} rounded-xl p-4`}>
             <h3 className="font-heading text-sm font-bold tracking-wider text-muted-foreground mb-3">POMODORO TECHNIQUE</h3>
             <div className="space-y-2">
               {[
@@ -386,7 +392,7 @@ export default function Focus() {
           </div>
 
           {/* Session History */}
-          <div className="glass rounded-xl p-4 border border-border">
+          <div className={`${PANEL} rounded-xl p-4`}>
             <h3 className="font-heading text-sm font-bold tracking-wider text-muted-foreground mb-3 flex items-center gap-2">
               <Clock className="w-4 h-4" /> RECENT SESSIONS
             </h3>

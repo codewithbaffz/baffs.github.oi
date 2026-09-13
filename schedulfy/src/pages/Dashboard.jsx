@@ -28,6 +28,12 @@ const demoTasks = [
   { id: 'demo-5', title: 'Fix navigation bug', status: 'todo', due_date: new Date(Date.now() - 172800000).toISOString(), priority: 'urgent' },
 ];
 
+// PERF: These panels live in the normal page scroll, not a fixed overlay. backdrop-filter
+// ("glass"/"glass-cyan"/"glass-indigo") on elements that scroll with the page forces Safari
+// to recompute the blur every frame, which is the main cause of scroll jank on iOS. Solid
+// tinted backgrounds keep a similar look without that per-frame recompositing cost.
+const PANEL = 'bg-card/90 border border-border';
+
 export default function Dashboard() {
   const { tasks, loading, createTask, updateTask, deleteTask, fetchTasks } = useTasks();
   
@@ -179,7 +185,7 @@ export default function Dashboard() {
 
       {/* NLP Input */}
       {showNLP && (
-        <div className="glass rounded-xl p-4 animate-fade-in">
+        <div className={`${PANEL} rounded-xl p-4 animate-fade-in`}>
           <NLPTaskInput
             onTaskCreated={async (task) => {
               try {
@@ -198,7 +204,7 @@ export default function Dashboard() {
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map(({ label, value, icon: Icon, color, bg }) => (
-          <div key={label} className={`glass rounded-xl p-4 border ${bg} transition-all hover:scale-[1.02]`}>
+          <div key={label} className={`bg-card/90 rounded-xl p-4 border ${bg} transition-all hover:scale-[1.02]`}>
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs text-muted-foreground uppercase tracking-wider">{label}</p>
@@ -213,7 +219,7 @@ export default function Dashboard() {
       </div>
 
       {/* Progress Bar */}
-      <div className="glass rounded-xl p-4 border border-border">
+      <div className={`${PANEL} rounded-xl p-4`}>
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
             <Target className="w-4 h-4 text-primary" />
@@ -240,7 +246,7 @@ export default function Dashboard() {
           </div>
 
           {overdueTasks.length > 0 && (
-            <div className="glass-cyan rounded-xl p-3 border border-destructive/30">
+            <div className="bg-destructive/10 rounded-xl p-3 border border-destructive/30">
               <p className="text-xs text-destructive font-semibold mb-2 flex items-center gap-1">
                 <AlertTriangle className="w-3 h-3" /> {overdueTasks.length} OVERDUE TASK{overdueTasks.length > 1 ? 'S' : ''}
               </p>
@@ -287,7 +293,7 @@ export default function Dashboard() {
         {/* Sidebar panels */}
         <div className="space-y-4">
           {/* Upcoming */}
-          <div className="glass rounded-xl p-4 border border-border">
+          <div className={`${PANEL} rounded-xl p-4`}>
             <h3 className="font-heading text-sm font-bold tracking-wider text-muted-foreground mb-3">UPCOMING</h3>
             {upcomingTasks.length === 0 ? (
               <p className="text-muted-foreground text-xs text-center py-4">No upcoming tasks</p>
@@ -310,7 +316,7 @@ export default function Dashboard() {
           </div>
 
           {/* AI Suggestion Card */}
-          <div className="glass-indigo rounded-xl p-4">
+          <div className="bg-primary/10 rounded-xl p-4">
             <div className="flex items-center gap-2 mb-3">
               <Sparkles className="w-4 h-4 text-cyan" />
               <span className="text-sm font-semibold text-cyan">AI INSIGHT</span>
@@ -329,7 +335,7 @@ export default function Dashboard() {
           </div>
 
           {/* Quick Focus */}
-          <div className="glass rounded-xl p-4 border border-border">
+          <div className={`${PANEL} rounded-xl p-4`}>
             <h3 className="font-heading text-sm font-bold tracking-wider text-muted-foreground mb-3">QUICK FOCUS</h3>
             <Link
               to="/focus"

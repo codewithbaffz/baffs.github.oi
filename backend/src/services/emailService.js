@@ -2,8 +2,13 @@
 import { Resend } from 'resend';
 import crypto from 'crypto';
 
-const FROM_ADDRESS = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
-const FROM_NAME = process.env.COMPANY_NAME || 'Schedulfy';
+function getFromAddress() {
+  return process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
+}
+
+function getFromName() {
+  return process.env.COMPANY_NAME || 'Schedulfy';
+}
 
 function getResendClient() {
   return new Resend(process.env.RESEND_API_KEY);
@@ -19,7 +24,7 @@ export const sendPasswordResetEmail = async ({ email, resetToken, frontendUrl = 
   const resend = getResendClient();
 
   const { data, error } = await resend.emails.send({
-    from: `${FROM_NAME} <${FROM_ADDRESS}>`,
+    from: `${getFromName()} <${getFromAddress()}>`,
     to: email,
     subject: 'Reset your Schedulfy password',
     text: `Reset your Schedulfy password here: ${resetLink}\n\nThis link expires in 30 minutes.`,
@@ -192,7 +197,7 @@ export const sendInvitationEmail = async (inviteData) => {
   const resend = getResendClient();
 
   const { data, error } = await resend.emails.send({
-    from: `${FROM_NAME} <${FROM_ADDRESS}>`,
+    from: `${getFromName()} <${getFromAddress()}>`,
     to: email,
     subject: ` ${inviterName} invited you to ${workspaceName}`,
     html: htmlContent,

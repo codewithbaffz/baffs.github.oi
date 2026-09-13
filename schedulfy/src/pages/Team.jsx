@@ -47,6 +47,13 @@ const DEMO_MEMBERS = [
   { id: 'user4', full_name: 'Emma Williams', email: 'emma@schedulfy.com' },
 ];
 
+// PERF: Panels that live inside the normal page scroll (not fixed overlays) use this
+// solid background instead of the blurred "glass" treatment. backdrop-filter on
+// elements that scroll with the page forces Safari to recompute the blur every
+// frame, which is the main cause of scroll jank on iOS. Keep "glass" only for
+// floating/fixed overlays like the chat modal backdrop.
+const PANEL = 'bg-card/90 border border-border';
+
 export default function Team() {
   const { user, isAuthenticated } = useAuth();
   const { currentWorkspace, fetchWorkspaces: refreshWorkspaceList, selectWorkspace } = useWorkspace();
@@ -132,6 +139,18 @@ export default function Team() {
       fetchWorkspaces();
     }
   }, [currentWorkspace, isAuthenticated, user, fetchWorkspaces]); // FIX: Added fetchWorkspaces to dependencies
+
+  // PERF: Lock body scroll while the chat modal is open. Without this, the page
+  // behind the modal can still scroll, which forces Safari to keep recomputing
+  // the modal backdrop's blur on every frame — the other big source of jank.
+  useEffect(() => {
+    if (!showChat) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [showChat]);
 
   const currentUserId = user?._id || user?.id;
   const isWorkspaceAdmin = workspace?.admin_id === currentUserId;
@@ -452,7 +471,7 @@ export default function Team() {
   );
 
   if (!workspace) return (
-    <div className="p-6 max-w-2xl mx-auto animate-fade-in">
+    <div className="p-4 sm:p-6 max-w-2xl mx-auto animate-fade-in">
       <div className="text-center py-16">
         <div className="w-20 h-20 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center mx-auto mb-6">
           <Users className="w-10 h-10 text-primary" />
@@ -464,7 +483,7 @@ export default function Team() {
             <Plus className="w-5 h-5" /> Create Workspace
           </button>
         ) : (
-          <div className="glass rounded-xl p-6 text-left space-y-4 max-w-sm mx-auto">
+          <div className={`${PANEL} rounded-xl p-6 text-left space-y-4 max-w-sm mx-auto`}>
             <input 
               placeholder="Workspace name *" 
               value={wsForm.name} 
@@ -493,12 +512,12 @@ export default function Team() {
   );
 
   return (
-    <div className="p-6 max-w-5xl mx-auto space-y-6 animate-fade-in">
+    <div className="p-4 sm:p-6 max-w-5xl mx-auto space-y-6 animate-fade-in overflow-x-hidden">
       {/* Workspace Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <div className="flex items-center gap-3 mb-1">
-            <div className="w-10 h-10 rounded-xl bg-primary/20 border border-primary/30 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-primary/20 border border-primary/30 flex items-center justify-center shrink-0">
               <Briefcase className="w-5 h-5 text-primary" />
             </div>
             <div>
@@ -519,45 +538,48 @@ export default function Team() {
             </div>
           )}
         </div>
-        <div className="flex items-center gap-2">
-        <button
-          onClick={() => setShowChat(true)}
-          className="relative flex items-center gap-2 px-3 py-2 border border-border text-foreground rounded-lg text-sm font-semibold hover:border-primary/50 hover:text-primary transition-all"
-          aria-label="Open team chat"
-        >
-          <MessageSquare className="w-4 h-4" /> Team Chat
-          {messages.length > 0 && (
-            <span className="min-w-5 h-5 px-1 flex items-center justify-center rounded-full bg-primary/15 text-primary text-[11px]">
-              {messages.length > 99 ? '99+' : messages.length}
-            </span>
-          )}
-        </button>
-        <button
-          onClick={() => setShowCreate((current) => !current)}
-          className="flex items-center gap-2 px-3 py-2 border border-primary/40 text-primary rounded-lg text-sm font-semibold hover:bg-primary/10 transition-all"
-        >
-          <Plus className="w-4 h-4" /> New Workspace
-        </button>
-        {!isWorkspaceAdmin && (
+
+        {/* Action buttons: 2-column grid on mobile so nothing overflows or gets clipped,
+            collapses into a single row once there's enough width. */}
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center sm:gap-2">
           <button
-            onClick={leaveWorkspace}
-            className="flex items-center gap-2 px-3 py-2 border border-border text-muted-foreground rounded-lg text-sm font-semibold hover:text-red-400 hover:border-red-400/40 transition-all"
+            onClick={() => setShowChat(true)}
+            className="relative flex items-center justify-center gap-2 px-3 py-2 border border-border text-foreground rounded-lg text-sm font-semibold hover:border-primary/50 hover:text-primary transition-all"
+            aria-label="Open team chat"
           >
-            <LogOut className="w-4 h-4" /> Leave
+            <MessageSquare className="w-4 h-4" /> Team Chat
+            {messages.length > 0 && (
+              <span className="min-w-5 h-5 px-1 flex items-center justify-center rounded-full bg-primary/15 text-primary text-[11px]">
+                {messages.length > 99 ? '99+' : messages.length}
+              </span>
+            )}
           </button>
-        )}
-        <button 
-          onClick={() => setShowInvite(!showInvite)} 
-          className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-semibold hover:bg-primary/90 transition-all"
-          disabled={!isAuthenticated || !isWorkspaceAdmin}
-        >
-          <UserPlus className="w-4 h-4" /> Invite Member
-        </button>
+          <button
+            onClick={() => setShowCreate((current) => !current)}
+            className="flex items-center justify-center gap-2 px-3 py-2 border border-primary/40 text-primary rounded-lg text-sm font-semibold hover:bg-primary/10 transition-all"
+          >
+            <Plus className="w-4 h-4" /> New Workspace
+          </button>
+          {!isWorkspaceAdmin && (
+            <button
+              onClick={leaveWorkspace}
+              className="flex items-center justify-center gap-2 px-3 py-2 border border-border text-muted-foreground rounded-lg text-sm font-semibold hover:text-red-400 hover:border-red-400/40 transition-all"
+            >
+              <LogOut className="w-4 h-4" /> Leave
+            </button>
+          )}
+          <button 
+            onClick={() => setShowInvite(!showInvite)} 
+            className={`flex items-center justify-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-semibold hover:bg-primary/90 transition-all ${isWorkspaceAdmin ? 'col-span-2 sm:col-span-1' : ''}`}
+            disabled={!isAuthenticated || !isWorkspaceAdmin}
+          >
+            <UserPlus className="w-4 h-4" /> Invite Member
+          </button>
         </div>
       </div>
 
       {showCreate && (
-        <div className="glass rounded-xl p-4 border border-primary/20 animate-fade-in">
+        <div className={`${PANEL} rounded-xl p-4 animate-fade-in`}>
           <div className="flex items-center justify-between mb-3">
             <h2 className="font-heading text-sm font-bold tracking-wide">CREATE WORKSPACE</h2>
             <button
@@ -594,7 +616,7 @@ export default function Team() {
       )}
 
       {isWorkspaceAdmin && (
-        <div className="glass rounded-xl p-4 border border-border">
+        <div className={`${PANEL} rounded-xl p-4`}>
           <div className="flex items-center justify-between mb-3">
             <div>
               <h2 className="font-heading text-sm font-bold tracking-wide">MEMBER ACCESS</h2>
@@ -618,7 +640,7 @@ export default function Team() {
 
       {/* Invite Modal */}
       {showInvite && (
-        <div className="glass rounded-xl p-4 border border-primary/20 animate-fade-in">
+        <div className={`${PANEL} rounded-xl p-4 animate-fade-in`}>
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-heading text-sm font-bold tracking-wider">INVITE BY EMAIL</h3>
             <button
@@ -634,7 +656,7 @@ export default function Team() {
             </button>
           </div>
           
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             <div className="relative flex-1">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <input
@@ -653,7 +675,7 @@ export default function Team() {
             <button 
               onClick={inviteMember} 
               disabled={inviting || !inviteEmail.trim()} 
-              className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-semibold hover:bg-primary/90 disabled:opacity-50 transition-all whitespace-nowrap"
+              className="flex items-center justify-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-semibold hover:bg-primary/90 disabled:opacity-50 transition-all whitespace-nowrap"
             >
               {inviting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
               {inviting ? 'Sending...' : 'Send Invite'}
@@ -683,7 +705,7 @@ export default function Team() {
       )}
 
       <div>
-        <section className="glass rounded-xl border border-border p-4">
+        <section className={`${PANEL} rounded-xl p-4`}>
           <div className="flex items-center gap-2 mb-3">
             <Video className="w-4 h-4 text-cyan" />
             <div>
@@ -722,7 +744,10 @@ export default function Team() {
               Schedule on Zoom
             </button>
           </div>
-          <div className="mt-4 space-y-2 max-h-36 overflow-y-auto">
+          <div
+            className="mt-4 space-y-2 max-h-36 overflow-y-auto overscroll-contain"
+            style={{ WebkitOverflowScrolling: 'touch' }}
+          >
             {meetings.map((meeting) => {
               const meetingId = meeting.id || meeting._id;
               return (
@@ -808,7 +833,10 @@ export default function Team() {
                 </div>
               </div>
             )}
-            <div className="flex-1 overflow-y-auto space-y-3 p-5">
+            <div
+              className="flex-1 overflow-y-auto overscroll-contain space-y-3 p-5"
+              style={{ WebkitOverflowScrolling: 'touch' }}
+            >
               {messages.length === 0 ? (
                 <p className="py-16 text-center text-sm text-muted-foreground">No messages yet. Start the conversation.</p>
               ) : messages.map((message) => {
@@ -889,18 +917,18 @@ export default function Team() {
       )}
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-3 gap-2 sm:gap-4">
         {[
           { label: 'Members', value: members.length, icon: Users, color: 'text-primary' },
           { label: 'Shared Tasks', value: sharedTasks.length, icon: CheckSquare, color: 'text-cyan' },
           { label: 'Completed', value: sharedTasks.filter(t => t.status === 'done').length, icon: UserCheck, color: 'text-green-400' },
         ].map(({ label, value, icon: Icon, color }) => (
-          <div key={label} className="glass rounded-xl p-4 border border-border">
-            <div className="flex items-center gap-3">
-              <Icon className={`w-5 h-5 ${color}`} />
-              <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wider">{label}</p>
-                <p className={`text-2xl font-heading font-bold ${color}`}>{value}</p>
+          <div key={label} className={`${PANEL} rounded-xl p-3 sm:p-4`}>
+            <div className="flex items-center gap-2 sm:gap-3">
+              <Icon className={`w-5 h-5 shrink-0 ${color}`} />
+              <div className="min-w-0">
+                <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider truncate">{label}</p>
+                <p className={`text-xl sm:text-2xl font-heading font-bold ${color}`}>{value}</p>
               </div>
             </div>
           </div>
@@ -918,10 +946,10 @@ export default function Team() {
             const completed = getMemberCompletedCount(member.id);
             const rate = taskCount > 0 ? Math.round((completed / taskCount) * 100) : 0;
             return (
-              <div key={member.id} className={`glass rounded-xl p-5 border transition-all ${
+              <div key={member.id} className={`rounded-xl p-5 border transition-all ${
                 isPending 
                   ? 'border-yellow-400/30 bg-yellow-400/5' 
-                  : 'border-border hover:border-primary/30'
+                  : 'bg-card/90 border-border hover:border-primary/30'
               }`}>
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">

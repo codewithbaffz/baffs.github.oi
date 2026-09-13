@@ -30,7 +30,7 @@ const NAV_ITEMS = [
   { icon: Calendar, label: 'Calendar', path: '/calendar' },
   { icon: FolderOpen, label: 'Projects', path: '/projects' },
   { icon: Users, label: 'Team', path: '/team' },
-  { icon: Zap, label: 'Insights', path: '/insights' },
+  { icon: Zap, label: 'Insights & AI', path: '/insights' },
   { icon: FileText, label: 'Templates', path: '/templates' },
   { icon: Timer, label: 'Focus', path: '/focus' },
   { icon: SettingsIcon, label: 'Settings', path: '/settings' },
@@ -163,6 +163,9 @@ export default function Layout() {
                 return <option key={id} value={id}>{workspace.name}</option>;
               })}
             </select>
+            <span className="text-base font-semibold text-foreground tracking-wide shrink-0">
+              Workspace
+            </span>
           </div>
           <div className="flex items-center gap-3">
             <button
